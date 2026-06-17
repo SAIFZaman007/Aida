@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background-color: #04070a;
+  color: #d6f3ff;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  /* Atmosphere: cool radial glow + fine grid, NOT a flat fill. */
+  background-image:
+    radial-gradient(1200px 600px at 50% -10%, rgba(56, 225, 255, 0.08), transparent 60%),
+    radial-gradient(800px 500px at 100% 100%, rgba(255, 59, 92, 0.05), transparent 60%),
+    linear-gradient(rgba(56, 225, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 225, 255, 0.035) 1px, transparent 1px);
+  background-size: auto, auto, 38px 38px, 38px 38px;
+}
+
+/* Faint moving scanline overlay for that "live console" feel. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.015) 0px,
+    rgba(255, 255, 255, 0.015) 1px,
+    transparent 2px,
+    transparent 4px
+  );
+  mix-blend-mode: overlay;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(56, 225, 255, 0.25);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 225, 255, 0.45);
+}
+
+@layer components {
+  /* Glass panel with a hairline cyan edge. */
+  .panel {
+    @apply rounded-xl border border-line bg-glass backdrop-blur-sm;
+  }
+  /* Decorative corner brackets — the signature HUD detail. */
+  .brackets {
+    position: relative;
+  }
+  .brackets::before,
+  .brackets::after {
+    content: "";
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-color: rgba(56, 225, 255, 0.6);
+  }
+  .brackets::before {
+    top: -1px;
+    left: -1px;
+    border-top: 2px solid;
+    border-left: 2px solid;
+  }
+  .brackets::after {
+    bottom: -1px;
+    right: -1px;
+    border-bottom: 2px solid;
+    border-right: 2px solid;
+  }
+  .label {
+    @apply font-hud text-[10px] uppercase tracking-[0.28em] text-cyan/70;
+  }
+}
+
+/* Streaming caret. */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.caret::after {
+  content: "▋";
+  margin-left: 2px;
+  color: #38e1ff;
+  animation: blink 1s step-end infinite;
+}
+
+@layer components {
+  /* Form control used across the Settings panel. */
+  .select {
+    @apply rounded-md border border-line bg-void-700 px-2 py-1 font-mono text-[12px] text-frost focus:border-cyan/50 focus:outline-none;
+  }
+}
+
+/* Real-Time Reading Progress Highlighter — the segment of the streaming
+   bubble currently being spoken by the avatar. Smooth color/background
+   transitions so the highlight glides forward rather than snapping. */
+.reading-highlight {
+  background-color: rgba(56, 225, 255, 0.22);
+  color: #eafcff;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(56, 225, 255, 0.25);
+  padding: 0 1px;
+  transition: background-color 160ms ease-out, box-shadow 160ms ease-out, color 160ms ease-out;
+  scroll-margin-block: 96px;
+}
