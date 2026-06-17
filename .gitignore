@@ -3,7 +3,6 @@
 #  React · Vite · Electron · Tailwind · electron-builder
 # ═══════════════════════════════════════════════════════
 
-
 # ── Dependencies ─────────────────────────────
 node_modules/
 .pnp
@@ -13,12 +12,10 @@ node_modules/
 .yarn/build-state.yml
 .yarn/install-state.gz
 
-
 # ── Vite build output ────────────────────────
 dist/
 dist-ssr/
 .vite/
-
 
 # ── Electron build output ────────────────────
 # electron-builder outputs — rebuilt with:  npm run dist
@@ -30,17 +27,14 @@ out/
 # Electron-builder cache
 .electron-builder-cache/
 
-
 # ── Electron Forge (if ever switched) ────────
 .webpack/
-
 
 # ── Local env / secrets ──────────────────────
 .env
 .env.*
 !.env.example
 *.env.local
-
 
 # ── Logs ─────────────────────────────────────
 *.log
@@ -51,12 +45,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-
 # ── Runtime cache ────────────────────────────
 .cache/
 .parcel-cache/
 .turbo/
-
 
 # ── Testing ──────────────────────────────────
 coverage/
@@ -64,10 +56,8 @@ coverage/
 playwright-report/
 test-results/
 
-
 # ── TypeScript ───────────────────────────────
 *.tsbuildinfo
-
 
 # ── Editor & OS ──────────────────────────────
 .DS_Store
@@ -78,11 +68,10 @@ Thumbs.db
 *.swo
 *~
 
-
 # ── 3D avatar model files (large binaries) ───
 public/avatars/*.gltf
 public/avatars/*.bin
 
-
 # ── Storybook (if added later) ───────────────
 storybook-static/
+.gitignore
