@@ -15,6 +15,7 @@ async function json(path, options = {}) {
 export const api = {
   health: () => json("/health"),
 
+  // Projects
   listProjects: () => json("/projects"),
   createProject: (name, description = "") =>
     json("/projects", { method: "POST", body: JSON.stringify({ name, description }) }),
@@ -22,6 +23,7 @@ export const api = {
     json(`/projects/${id}`, { method: "PATCH", body: JSON.stringify(patch) }),
   deleteProject: (id) => json(`/projects/${id}`, { method: "DELETE" }),
 
+  // Conversations
   listConversations: (projectId) => json(`/projects/${projectId}/conversations`),
   createConversation: (projectId, title, persona = "executive") =>
     json("/conversations", {
@@ -33,6 +35,7 @@ export const api = {
   deleteConversation: (id) => json(`/conversations/${id}`, { method: "DELETE" }),
   listMessages: (conversationId) => json(`/conversations/${conversationId}/messages`),
 
+  // Streaming chat — named SSE events: token / sentence / done / error
   async streamChat({ conversationId, content, remember = true }, onToken, signal, onSentence) {
     const res = await fetch(`${API}/chat`, {
       method: "POST",
