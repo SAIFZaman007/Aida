@@ -34,11 +34,17 @@ export default function App() {
   const avatarUrl = resolveAvatarUrl(settings, avatar);
 
   useEffect(() => {
-    api
-      .health()
-      .then((h) => setStatus({ online: true, model: h.model || "—" }))
-      .catch(() => setStatus({ online: false, model: "—" }));
+    const checkHealth = () =>
+      api
+        .health()
+        .then((h) => setStatus({ online: true, model: h.model || "—" }))
+        .catch(() => setStatus({ online: false, model: "—" }));
+
+    checkHealth();                                   // immediate on mount
     api.listProjects().then(setProjects).catch(() => {});
+
+    const timer = setInterval(checkHealth, 30_000);  // every 30 seconds
+    return () => clearInterval(timer);               // cleanup on unmount
   }, []);
 
   useEffect(() => {
