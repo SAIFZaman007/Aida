@@ -40,11 +40,11 @@ export default function App() {
         .then((h) => setStatus({ online: true, model: h.model || "—" }))
         .catch(() => setStatus({ online: false, model: "—" }));
 
-    checkHealth();                                   // immediate on mount
+    checkHealth();
     api.listProjects().then(setProjects).catch(() => {});
 
-    const timer = setInterval(checkHealth, 30_000);  // every 30 seconds
-    return () => clearInterval(timer);               // cleanup on unmount
+    const timer = setInterval(checkHealth, 30_000);
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
