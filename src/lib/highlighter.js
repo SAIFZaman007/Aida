@@ -11,7 +11,7 @@
        and registers each sentence's [charStart, charEnd) range within the
        full reply text.
     2. Receives "speaking progress" updates from speech.js — either:
-         a. word-level timing marks from /voice/speak_marks (Piper), or
+         a. word-level timing marks from /voice/speak_marks (cloud voice), or
          b. SpeechSynthesis `onboundary` events (webspeech), or
          c. a coarse per-sentence fallback (highlight the whole sentence
             while it's spoken).
@@ -22,6 +22,7 @@
   wrapped in a <mark>, and auto-scroll it into view — karaoke/teleprompter
   style, smoothly advancing, regardless of which TTS backend is active.
 */
+import { mapSpokenIndexToRaw } from "./text.js";
 
 export class ReadingHighlighter {
   constructor({ onUpdate } = {}) {
@@ -67,18 +68,26 @@ export class ReadingHighlighter {
     }
   }
 
-  /** webspeech onboundary fallback: highlight from charIndex to the next
-   *  word boundary within the sentence (approximated by whitespace). */
-  driveWithBoundary(sentenceIndex, charIndexInSentence) {
+  /** webspeech onboundary: `charIndex` indexes the SPOKEN text (cleaned and
+   *  normalized, `spokenLen` chars long), which differs from the raw sentence
+   *  shown on screen. Map it proportionally onto the raw sentence and snap to
+   *  a whole word. Without `spokenLen` the index is taken as a raw offset. */
+  driveWithBoundary(sentenceIndex, charIndex, spokenLen) {
     const sentence = this.sentences[sentenceIndex];
     if (!sentence) return;
+    if (spokenLen > 0) {
+      const span = mapSpokenIndexToRaw(charIndex, spokenLen, sentence.text);
+      if (!span) return;
+      this._setRange({
+        start: sentence.charStart + span.start,
+        end: sentence.charStart + span.end,
+      });
+      return;
+    }
     const text = sentence.text;
-    let end = text.indexOf(" ", charIndexInSentence);
+    let end = text.indexOf(" ", charIndex);
     if (end === -1) end = text.length;
-    this._setRange({
-      start: sentence.charStart + charIndexInSentence,
-      end: sentence.charStart + end,
-    });
+    this._setRange({ start: sentence.charStart + charIndex, end: sentence.charStart + end });
   }
 
   /** Coarse fallback: highlight the entire sentence while it's spoken. */

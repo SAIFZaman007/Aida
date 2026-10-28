@@ -3,6 +3,8 @@
 
   Each entry points at a GLB model (place files in frontend/public/avatars/)
   and declares a voice "gender" hint used to auto-pick a matching TTS voice.
+  `voiceHints` apply to ENGLISH browser voices; Bengali voices are chosen by
+  language (bn-BD first) because devices rarely ship more than one or two.
   Adding a third avatar later = one more object here.
 
   You can also load ANY hosted GLB without downloading anything: set a custom

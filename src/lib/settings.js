@@ -11,12 +11,14 @@
 import { useSyncExternalStore } from "react";
 
 const KEY = "aida.settings.v1";
+// Bump when a stored value must be migrated once (see load()).
+const SCHEMA = 2;
 
 const DEFAULTS = {
   avatar: "female", // "female" (default) | "male"
   customAvatarFemale: "", // optional hosted GLB URL (overrides the local file)
   customAvatarMale: "",   // optional hosted GLB URL (overrides the local file)
-  ttsProvider: "webspeech", // "webspeech" (instant) | "piper" (backend, natural)
+  ttsProvider: "cloud", // "cloud" (Gemini via backend: natural, Bengali + English) | "webspeech" (browser voices)
   voiceURI: "", // resolved & pinned once so the voice never changes randomly
   rate: 1.0,
   pitch: 1.0,
@@ -24,13 +26,24 @@ const DEFAULTS = {
   micEnabled: true,
   micDeviceId: "", // "" = system default
   voiceMode: false, // continuous hands-free conversation (VAD + barge-in)
+  _v: SCHEMA,
 };
 
 function load() {
   try {
-    return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || "{}") };
+    const stored = JSON.parse(localStorage.getItem(KEY) || "{}");
+    const merged = { ...DEFAULTS, ...stored };
+    // v1 -> v2: the local Piper engine was replaced by the cloud (Gemini) voice,
+    // and "webspeech" was only ever the old default for everyone, not a choice
+    // made for Bengali. Move people to "cloud" once; they can switch back.
+    if ((stored._v || 1) < SCHEMA) {
+      merged.ttsProvider = "cloud";
+      merged._v = SCHEMA;
+    }
+    if (merged.ttsProvider === "piper") merged.ttsProvider = "cloud";
+    return merged;
   } catch {
-    return { ...DEFAULTS };
+    return { ...DEFAULTS, _v: SCHEMA };
   }
 }
 

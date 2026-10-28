@@ -1,7 +1,7 @@
 # ── AIDA Frontend — Production Dockerfile ────────────────────────────
 
 # ── Stage 1: Build Vite/React bundle ─────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 WORKDIR /app
 
 ARG VITE_API_URL

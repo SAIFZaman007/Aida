@@ -4,6 +4,7 @@ import { tts, speechBus } from "../lib/speech.js";
 import { VoiceController } from "../lib/voice.js";
 import { useSettings, updateSettings } from "../lib/settings.js";
 import { getAvatar } from "../lib/avatars.js";
+import { detectLanguage } from "../lib/text.js";
 
 /*
   ChatPanel — text + real-time voice console.
@@ -15,13 +16,14 @@ import { getAvatar } from "../lib/avatars.js";
   per-token churn that made long chats feel laggy is gone. Finished replies are
   committed to `messages` once, on completion.
 
-  Plus: simultaneous voice (tts.feed), a Stop button (abort + tts.cancel), and
-  hands-free voice mode with barge-in.
+  Plus: simultaneous voice (the backend's `sentence` events feed tts.speakSentence,
+  so voice and highlighter share one set of Bengali/English-aware boundaries),
+  a Stop button (abort + tts.cancel), and hands-free voice mode with barge-in.
 
   READING HIGHLIGHTER: the backend now emits per-sentence SSE "sentence" events
   as soon as a sentence boundary is produced. Each sentence is registered with
   tts.highlighter (lib/highlighter.js), which then drives a live [start,end)
-  character range — synced either to Piper word-level marks (speak_marks) or
+  character range — synced either to cloud-voice word-level marks (speak_marks) or
   to the Web Speech "boundary" event — via tts.highlighter.onUpdate. The
   streaming bubble renders that range as a <mark> and auto-scrolls it into
   view, teleprompter-style.
@@ -35,6 +37,9 @@ export default function ChatPanel({ conversation, setSpeaking }) {
   const [speaking, setSpeakingLocal] = useState(false);
   const [voiceState, setVoiceState] = useState("idle");
   const [highlightRange, setHighlightRange] = useState(null); // {start,end} | null
+  // The finished reply that is still being read aloud. Speech usually outlasts
+  // streaming, so the highlight must follow the reply into `messages`.
+  const [spokenId, setSpokenId] = useState(null);
 
   const vcRef = useRef(null);
   const abortRef = useRef(null);
@@ -94,7 +99,6 @@ export default function ChatPanel({ conversation, setSpeaking }) {
       rafRef.current = 0;
       const full = pendingRef.current;
       setStreaming((s) => (s ? { text: full } : s));
-      tts.feed(full);
     });
   }
   function clearFrame() {
@@ -103,12 +107,11 @@ export default function ChatPanel({ conversation, setSpeaking }) {
   }
 
   function commitAssistant(text, opts = {}) {
-    setMessages((m) => [
-      ...m,
-      { id: "a" + Date.now(), role: "assistant", content: text, ...opts },
-    ]);
+    const id = "a" + Date.now();
+    setMessages((m) => [...m, { id, role: "assistant", content: text, ...opts }]);
     setStreaming(null);
-    setHighlightRange(null);
+    // Keep any active highlight: tts.highlighter clears it itself when speech ends.
+    setSpokenId(opts.error ? null : id);
   }
 
   function stopAll() {
@@ -121,6 +124,7 @@ export default function ChatPanel({ conversation, setSpeaking }) {
     if (pendingRef.current.trim()) commitAssistant(pendingRef.current);
     else setStreaming(null);
     setHighlightRange(null);
+    setSpokenId(null);
   }
 
   async function send(text) {
@@ -129,6 +133,7 @@ export default function ChatPanel({ conversation, setSpeaking }) {
     if (!content || !conv || busy) return;
     setDraft("");
     setBusy(true);
+    tts.cancel(); // silence the previous reply so its audio can't mix with this one
     tts.resetStream();
     pendingRef.current = "";
     setHighlightRange(null);
@@ -146,11 +151,9 @@ export default function ChatPanel({ conversation, setSpeaking }) {
           scheduleFrame();
         },
         ctrl.signal,
-        (sentence) => tts.registerSentence(sentence),
+        (sentence) => tts.speakSentence(sentence),
       );
       clearFrame();
-      tts.feed(full);
-      tts.flush();
       commitAssistant(full);
     } catch (e) {
       clearFrame();
@@ -158,7 +161,10 @@ export default function ChatPanel({ conversation, setSpeaking }) {
         if (pendingRef.current.trim()) commitAssistant(pendingRef.current);
         else setStreaming(null);
       } else {
-        commitAssistant("\u26A0 " + e.message, { error: true });
+        // Keep whatever was already shown (the server saves partial replies too).
+        if (pendingRef.current.trim()) commitAssistant(pendingRef.current);
+        const ref = e.requestId ? ` (ref ${e.requestId})` : "";
+        commitAssistant("\u26A0 " + e.message + ref, { error: true });
       }
     } finally {
       setBusy(false);
@@ -224,7 +230,14 @@ export default function ChatPanel({ conversation, setSpeaking }) {
     <div className="flex h-full flex-col">
       <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto px-5 py-5">
         {messages.map((m) => (
-          <Bubble key={m.id} role={m.role} error={m.error} text={m.content} />
+          <Bubble
+            key={m.id}
+            role={m.role}
+            error={m.error}
+            text={m.content}
+            highlightRange={m.id === spokenId ? highlightRange : null}
+            markRef={markRef}
+          />
         ))}
         {streaming && (
           <Bubble
@@ -261,14 +274,15 @@ export default function ChatPanel({ conversation, setSpeaking }) {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              // isComposing: Bengali/phonetic IMEs use Enter to commit a word.
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                 e.preventDefault();
                 send(draft);
               }
             }}
             rows={1}
             placeholder="Transmit a message…  (Enter to send · Shift+Enter for newline)"
-            className="max-h-40 flex-1 resize-none rounded-lg border border-line bg-void-700 px-4 py-3 font-mono text-[13px] text-frost placeholder:text-steel/50 focus:border-cyan/50 focus:outline-none"
+            className="max-h-40 flex-1 resize-none rounded-lg border border-line bg-void-700 px-4 py-3 font-mono text-[13px] text-frost placeholder:text-steel/50 focus:border-cyan/50 focus:outline-hidden"
           />
           {canStop ? (
             <button
@@ -318,9 +332,12 @@ function renderHighlighted(text, range, markRef) {
 // Isolated so streaming updates only touch this one bubble.
 function Bubble({ role, text, error, streaming, highlightRange, markRef }) {
   const isUser = role === "user";
+  // lang lets the browser pick Bengali shaping/fonts and screen readers the right voice.
+  const lang = detectLanguage(text) === "bn" ? "bn" : undefined;
   return (
     <div className={"flex animate-rise " + (isUser ? "justify-end" : "justify-start")}>
       <div
+        lang={lang}
         className={
           "max-w-[80%] whitespace-pre-wrap rounded-lg px-4 py-2.5 text-[13px] leading-relaxed " +
           (isUser
@@ -332,7 +349,7 @@ function Bubble({ role, text, error, streaming, highlightRange, markRef }) {
       >
         {!isUser && !error && <div className="label mb-1">aida</div>}
         <span className={streaming ? "caret" : ""}>
-          {streaming ? renderHighlighted(text, highlightRange, markRef) : text}
+          {highlightRange ? renderHighlighted(text, highlightRange, markRef) : text}
         </span>
       </div>
     </div>

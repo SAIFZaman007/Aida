@@ -18,7 +18,11 @@ export default function Settings({ open, onClose }) {
   useEffect(() => {
     if (!open) return;
     const loadVoices = () =>
-      setVoices((window.speechSynthesis?.getVoices() || []).filter((v) => v.lang.startsWith("en")));
+      setVoices(
+        (window.speechSynthesis?.getVoices() || [])
+          .filter((v) => /^(en|bn)/i.test(v.lang))
+          .sort((a, b) => a.lang.localeCompare(b.lang) || a.name.localeCompare(b.name)),
+      );
     loadVoices();
     window.speechSynthesis?.addEventListener("voiceschanged", loadVoices);
     navigator.mediaDevices
@@ -32,7 +36,7 @@ export default function Settings({ open, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs"
       onClick={onClose}
     >
       <div
@@ -75,13 +79,13 @@ export default function Settings({ open, onClose }) {
               value={s.customAvatarFemale}
               onChange={(e) => updateSettings({ customAvatarFemale: e.target.value })}
               placeholder="Female .glb URL (e.g. https://models.readyplayer.me/<id>.glb)"
-              className="w-full rounded-md border border-line bg-void-700 px-2 py-1.5 font-mono text-[11px] text-frost placeholder:text-steel/40 focus:border-cyan/50 focus:outline-none"
+              className="w-full rounded-md border border-line bg-void-700 px-2 py-1.5 font-mono text-[11px] text-frost placeholder:text-steel/40 focus:border-cyan/50 focus:outline-hidden"
             />
             <input
               value={s.customAvatarMale}
               onChange={(e) => updateSettings({ customAvatarMale: e.target.value })}
               placeholder="Male .glb URL"
-              className="w-full rounded-md border border-line bg-void-700 px-2 py-1.5 font-mono text-[11px] text-frost placeholder:text-steel/40 focus:border-cyan/50 focus:outline-none"
+              className="w-full rounded-md border border-line bg-void-700 px-2 py-1.5 font-mono text-[11px] text-frost placeholder:text-steel/40 focus:border-cyan/50 focus:outline-hidden"
             />
             <p className="font-mono text-[10px] text-steel/60">
               Paste any hosted .glb (ARKit/Oculus morph targets recommended). Leave
@@ -105,11 +109,18 @@ export default function Settings({ open, onClose }) {
               onChange={(e) => updateSettings({ ttsProvider: e.target.value })}
               className="select"
             >
-              <option value="webspeech">Browser (instant)</option>
-              <option value="piper">Piper · natural (needs backend)</option>
+              <option value="cloud">Gemini · natural (Bengali + English)</option>
+              <option value="webspeech">Browser (instant, offline)</option>
             </select>
           </Row>
-          <Row label="Voice">
+          {s.ttsProvider === "webspeech" && !voices.some((v) => /^bn/i.test(v.lang)) && (
+            <p className="font-mono text-[10px] text-crimson/80">
+              No Bengali voice is installed on this device, so Bengali replies will not
+              sound right with the browser engine. Choose the Gemini engine, or install a
+              Bengali voice in your system settings.
+            </p>
+          )}
+          <Row label="Browser voice">
             <select
               value={s.voiceURI}
               onChange={(e) => updateSettings({ voiceURI: e.target.value })}
@@ -118,11 +129,15 @@ export default function Settings({ open, onClose }) {
               <option value="">Auto (match avatar)</option>
               {voices.map((v) => (
                 <option key={v.voiceURI} value={v.voiceURI}>
-                  {v.name}
+                  {v.name} ({v.lang})
                 </option>
               ))}
             </select>
           </Row>
+          <p className="font-mono text-[10px] text-steel/60">
+            The browser voice is used when the engine is set to Browser, and as an automatic
+            fallback if the Gemini voice is unavailable. Rate and pitch apply to it.
+          </p>
           <Row label={`Rate · ${s.rate.toFixed(2)}`}>
             <input
               type="range" min="0.6" max="1.4" step="0.05" value={s.rate}

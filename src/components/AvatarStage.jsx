@@ -17,7 +17,7 @@ import { speechBus } from "../lib/speech.js";
   ARKit/Oculus blendshapes for blinking, eye saccades, breathing,
   micro-expressions and lip-sync. Lip-sync amplitude comes from the shared
   speechBus, so the mouth tracks the ACTUAL voice (real audio amplitude with
-  Piper, word pulses with the browser voice).
+  the cloud voice, word pulses with the browser voice).
 */
 
 function isGltf(url) {

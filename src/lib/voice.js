@@ -1,9 +1,10 @@
 /*
   voice.js — hands-free microphone input with barge-in.
 
-  Pipeline (all local, all free):
-    mic -> Web Audio AnalyserNode -> energy VAD -> MediaRecorder per utterance
-        -> backend faster-whisper (/voice/transcribe) -> text -> onUtterance()
+  Pipeline:
+    mic -> Web Audio AnalyserNode -> energy VAD (local) -> MediaRecorder per
+        utterance -> backend (/voice/transcribe, Gemini; Bengali + English)
+        -> text -> onUtterance()
 
   Behavior contract (matches the spec):
     • The user can interrupt the avatar: when speech is detected while the

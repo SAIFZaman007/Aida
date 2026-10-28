@@ -35,7 +35,7 @@ export default function Dialog({ state, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs"
       onClick={onClose}
     >
       <div
@@ -56,7 +56,7 @@ export default function Dialog({ state, onClose }) {
               if (e.key === "Escape") onClose();
             }}
             placeholder={state.placeholder || ""}
-            className="w-full rounded-lg border border-line bg-void-700 px-3 py-2.5 font-mono text-[13px] text-frost placeholder:text-steel/50 focus:border-cyan/50 focus:outline-none"
+            className="w-full rounded-lg border border-line bg-void-700 px-3 py-2.5 font-mono text-[13px] text-frost placeholder:text-steel/50 focus:border-cyan/50 focus:outline-hidden"
           />
         ) : (
           <p className="font-mono text-[13px] leading-relaxed text-frost/80">
