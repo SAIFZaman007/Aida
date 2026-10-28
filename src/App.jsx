@@ -4,19 +4,25 @@ import ChatPanel from "./components/ChatPanel.jsx";
 import Settings from "./components/Settings.jsx";
 import Dialog from "./components/Dialog.jsx";
 import { api } from "./lib/api.js";
-import { useSettings } from "./lib/settings.js";
+import { useSettings, updateSettings } from "./lib/settings.js";
 import { getAvatar, resolveAvatarUrl } from "./lib/avatars.js";
 
+// Modes shown in the picker. "developer" and "ccna_trainer" still exist on the
+// backend so older sessions keep working; they are just not offered for new ones.
 const PERSONAS = [
+  ["nonstop", "Non-stop"],
   ["executive", "Executive"],
-  ["developer", "Developer"],
   ["coder", "Coder"],
   ["architect", "Architect"],
   ["security", "Security"],
-  ["ccna_trainer", "CCNA"],
-  ["researcher", "Research"],
+  ["researcher", "Researcher"],
   ["writer", "Writer"],
 ];
+const PERSONA_LABEL = {
+  ...Object.fromEntries(PERSONAS),
+  developer: "Developer",
+  ccna_trainer: "CCNA",
+};
 
 export default function App() {
   const settings = useSettings();
@@ -107,6 +113,29 @@ export default function App() {
     const c = await api.createConversation(project.id, "New session", persona);
     setConversations((cs) => [c, ...cs]);
     setConversation(c);
+  }
+  // Non-stop = open, hands-free voice conversation. One click: make sure a
+  // project exists, start a Non-stop session in it and switch the mic on.
+  async function startNonstop() {
+    setPersona("nonstop");
+    try {
+      let proj = project;
+      let created = null;
+      if (!proj) {
+        created = await api.createProject("Live Session");
+        proj = created;
+      }
+      const c = await api.createConversation(proj.id, "Non-stop conversation", "nonstop");
+      if (created) {
+        setProjects((ps) => [created, ...ps]);
+        setProject(created);
+      }
+      setConversations((cs) => [c, ...cs.filter((x) => x.id !== c.id)]);
+      setConversation(c);
+      updateSettings({ voiceMode: true });
+    } catch {
+      /* offline: the status badge already says so; the mode stays selected */
+    }
   }
   function renameConversation(c) {
     setDialog({
@@ -266,7 +295,7 @@ export default function App() {
               {PERSONAS.map(([id, label]) => (
                 <button
                   key={id}
-                  onClick={() => setPersona(id)}
+                  onClick={() => (id === "nonstop" ? startNonstop() : setPersona(id))}
                   className={
                     "rounded-md border px-2.5 py-1 font-hud text-[11px] uppercase tracking-wider transition " +
                     (persona === id
@@ -278,7 +307,11 @@ export default function App() {
                 </button>
               ))}
             </div>
-            <p className="mt-2 font-mono text-[10px] text-steel/60">New sessions use this mode.</p>
+            <p className="mt-2 font-mono text-[10px] text-steel/60">
+              {persona === "nonstop"
+                ? "Non-stop: just talk — the mic stays on and replies are spoken."
+                : "New sessions use this mode."}
+            </p>
           </div>
         </section>
 
@@ -290,7 +323,8 @@ export default function App() {
                 {conversation?.title ?? "No session"}
               </h2>
               <span className="label">
-                {project ? project.name : "no project"} · {conversation?.persona ?? persona}
+                {project ? project.name : "no project"} ·{" "}
+                {PERSONA_LABEL[conversation?.persona ?? persona] ?? conversation?.persona ?? persona}
               </span>
             </div>
           </div>

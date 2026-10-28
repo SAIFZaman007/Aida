@@ -191,7 +191,7 @@ export const api = {
    *  provider is unavailable (HTTP 200 by design so the mic loop keeps going). */
   async transcribe(blob) {
     const form = new FormData();
-    form.append("file", blob, "speech.webm");
+    form.append("file", blob, "speech.wav");
     const res = await request("/voice/transcribe", { method: "POST", body: form });
     return res.json();
   },
