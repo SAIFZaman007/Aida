@@ -1,0 +1,16 @@
+{
+  "name": "A.I.D.A — Artificial Intelligence Desktop Assistant",
+  "short_name": "A.I.D.A",
+  "description": "A voice-first AI assistant with a talking avatar — Bengali and English.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#04070a",
+  "theme_color": "#04070a",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

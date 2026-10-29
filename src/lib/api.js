@@ -98,8 +98,14 @@ async function json(path, options = {}) {
   return res.status === 204 ? null : res.json();
 }
 
+/** WebSocket URL of the live-transcription endpoint (same host and path prefix as the REST API). */
+export function liveSttUrl() {
+  return `${API.replace(/^http/i, "ws").replace(/\/+$/, "")}/voice/stream`;
+}
+
 export const api = {
   health: () => json("/health"),
+  liveSttUrl,
 
   // Projects
   listProjects: () => json("/projects"),
@@ -189,10 +195,10 @@ export const api = {
 
   /** Returns { text, language } — or { text:"", error, message } when the
    *  provider is unavailable (HTTP 200 by design so the mic loop keeps going). */
-  async transcribe(blob) {
+  async transcribe(blob, { signal } = {}) {
     const form = new FormData();
     form.append("file", blob, "speech.wav");
-    const res = await request("/voice/transcribe", { method: "POST", body: form });
+    const res = await request("/voice/transcribe", { method: "POST", body: form, signal });
     return res.json();
   },
 
@@ -204,6 +210,45 @@ export const api = {
       signal,
     });
     return res.blob();
+  },
+
+  /** Streamed speech: raw 16-bit mono PCM, delivered as Google generates it.
+   *  -> { sampleRate, chunks: AsyncIterable<Uint8Array> }. Rejects (ApiError, code
+   *  "unavailable"/"rate_limited"/…) BEFORE any audio when synthesis is unavailable —
+   *  the backend awaits the first chunk before answering — so callers can switch to a
+   *  fallback voice immediately. */
+  async speakStream(text, gender = "female", { signal } = {}) {
+    const res = await request("/voice/speak_stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, gender }),
+      signal,
+    });
+    const sampleRate = parseInt(res.headers.get("x-sample-rate") || "24000", 10) || 24000;
+    if (!res.body) {
+      const all = new Uint8Array(await res.arrayBuffer());
+      return {
+        sampleRate,
+        chunks: (async function* () {
+          if (all.length) yield all;
+        })(),
+      };
+    }
+    const reader = res.body.getReader();
+    return {
+      sampleRate,
+      chunks: (async function* () {
+        try {
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) return;
+            if (value?.length) yield value;
+          }
+        } finally {
+          reader.cancel().catch(() => {});
+        }
+      })(),
+    };
   },
 
   /** -> { audio: ArrayBuffer(WAV), marks, text, duration } */

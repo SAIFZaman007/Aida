@@ -3,44 +3,43 @@ import { api } from "../lib/api.js";
 import { tts, speechBus } from "../lib/speech.js";
 import { VoiceController } from "../lib/voice.js";
 import { useSettings, updateSettings } from "../lib/settings.js";
-import { getAvatar } from "../lib/avatars.js";
 import { detectLanguage } from "../lib/text.js";
+import { LiveReply } from "../lib/liveReply.js";
+import { BRAND } from "../lib/brand.js";
 
 /*
   ChatPanel — text + real-time voice console.
 
-  PERFORMANCE: the in-progress reply streams into a dedicated `streaming` state
-  rendered by ONE small bubble, and token updates are coalesced to at most one
-  setState per animation frame (requestAnimationFrame). The completed `messages`
-  list is therefore not copied or re-rendered on every token — the old O(n)
-  per-token churn that made long chats feel laggy is gone. Finished replies are
-  committed to `messages` once, on completion.
+  THE LOOP (text and voice run together, one sentence at a time)
+      sentence 1 appears → it is read aloud → sentence 2 appears → …
+  The backend streams `sentence` events as the model writes; each goes to the voice
+  queue (tts.speakSentence). The queue tells us — tts.onSentenceStart — the moment a
+  sentence begins to be read, and only then is its text shown (lib/liveReply.js).
+  Voice for the next sentences is already downloading while the current one plays,
+  so there is no dead air. With "Reveal text with the voice" off (or the voice off)
+  the text simply streams as fast as the model writes.
 
-  Plus: simultaneous voice (the backend's `sentence` events feed tts.speakSentence,
-  so voice and highlighter share one set of Bengali/English-aware boundaries),
-  a Stop button (abort + tts.cancel), and hands-free voice mode with barge-in.
+  LIVE LISTENING: while the person speaks, a live caption (ghost bubble) shows the
+  words as they are recognised; the final text becomes the message a moment after
+  they stop. Everything the avatar needs to look alive (speaking / listening /
+  thinking) is reported through `onActivity`.
 
-  READING HIGHLIGHTER: the backend now emits per-sentence SSE "sentence" events
-  as soon as a sentence boundary is produced. Each sentence is registered with
-  tts.highlighter (lib/highlighter.js), which then drives a live [start,end)
-  character range — synced either to cloud-voice word-level marks (speak_marks) or
-  to the Web Speech "boundary" event — via tts.highlighter.onUpdate. The
-  streaming bubble renders that range as a <mark> and auto-scrolls it into
-  view, teleprompter-style.
+  PERFORMANCE: the in-progress reply renders in ONE small bubble, updated at most
+  once per animation frame; finished replies are committed to `messages` once.
 */
-export default function ChatPanel({ conversation, setSpeaking }) {
+export default function ChatPanel({ conversation, avatar, onActivity }) {
   const settings = useSettings();
   const [messages, setMessages] = useState([]);
-  const [streaming, setStreaming] = useState(null); // { text } while generating
+  const [streaming, setStreaming] = useState(null); // { text } while a reply is being produced / read
   const [draft, setDraft] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [speaking, setSpeakingLocal] = useState(false);
+  const [busy, setBusy] = useState(false); // a request is in flight
+  const [speaking, setSpeaking] = useState(false);
   const [voiceState, setVoiceState] = useState("idle");
   const [transcribing, setTranscribing] = useState(false);
+  const [caption, setCaption] = useState(""); // live words of what the person is saying
   const [voiceNote, setVoiceNote] = useState({ kind: "", text: "" });
   const [highlightRange, setHighlightRange] = useState(null); // {start,end} | null
-  // The finished reply that is still being read aloud. Speech usually outlasts
-  // streaming, so the highlight must follow the reply into `messages`.
+  // A finished reply that is still being read aloud (only when text is not paced by the voice).
   const [spokenId, setSpokenId] = useState(null);
 
   const vcRef = useRef(null);
@@ -51,28 +50,48 @@ export default function ChatPanel({ conversation, setSpeaking }) {
   const sendRef = useRef(null); // always the latest send() — voice callbacks must not capture a stale one
   const stopRef = useRef(null);
   const abortRef = useRef(null);
-  const pendingRef = useRef("");
+  const liveRef = useRef(null); // LiveReply being produced / read, or null
   const rafRef = useRef(0);
   const scrollRef = useRef(null);
   const markRef = useRef(null);
   const convRef = useRef(conversation);
   convRef.current = conversation;
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
 
+  // ---- voice engine wiring ---------------------------------------------------------
   useEffect(() => {
-    tts.onSpeakingChange = (v) => {
-      setSpeaking(v);
-      setSpeakingLocal(v);
+    tts.onSpeakingChange = setSpeaking;
+    tts.onSentenceStart = (index) => {
+      const live = liveRef.current;
+      if (live) {
+        live.reveal(index);
+        scheduleFrame();
+      }
     };
-    tts.configure(settings, getAvatar(settings.avatar));
-  }, [settings, setSpeaking]);
-
-  // Drive the live highlight range from the TTS highlighter.
-  useEffect(() => {
+    tts.onBusyChange = (isBusy) => {
+      if (!isBusy) maybeFinish();
+    };
     tts.highlighter.onUpdate = (range) => setHighlightRange(range);
     return () => {
+      tts.onSpeakingChange = null;
+      tts.onSentenceStart = null;
+      tts.onBusyChange = null;
       tts.highlighter.onUpdate = null;
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The avatar decides the voice: its gender goes to the cloud voice / browser voice picker.
+  useEffect(() => {
+    tts.configure(settings, avatar);
+  }, [settings, avatar]);
+
+  // What the avatar should be doing right now.
+  const capturing = voiceState === "capturing";
+  const thinkingNow = (busy && !speaking) || transcribing;
+  useEffect(() => {
+    onActivity?.({ speaking, listening: capturing, thinking: thinkingNow });
+  }, [speaking, capturing, thinkingNow, onActivity]);
 
   // A Non-stop session means "keep listening": switch hands-free voice on.
   useEffect(() => {
@@ -106,16 +125,25 @@ export default function ChatPanel({ conversation, setSpeaking }) {
     };
   }, [settings.voiceMode]);
 
+  // Opening another session: silence and drop whatever belonged to the previous one.
+  const conversationId = conversation?.id;
   useEffect(() => {
-    if (!conversation) return;
-    api.listMessages(conversation.id).then(setMessages).catch(() => setMessages([]));
-    setStreaming(null);
-    setHighlightRange(null);
-  }, [conversation]);
+    discardAll();
+    setMessages([]);
+    if (!conversationId) return undefined;
+    let alive = true;
+    api
+      .listMessages(conversationId)
+      .then((m) => alive && setMessages(m))
+      .catch(() => alive && setMessages([]));
+    return () => {
+      alive = false;
+    };
+  }, [conversationId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [messages, streaming]);
+  }, [messages, streaming, caption]);
 
   // Auto-scroll the active highlight into view, smoothly, without yanking
   // the viewport when it's already visible.
@@ -127,18 +155,17 @@ export default function ChatPanel({ conversation, setSpeaking }) {
     const elRect = el.getBoundingClientRect();
     const cRect = container.getBoundingClientRect();
     const visible = elRect.top >= cRect.top && elRect.bottom <= cRect.bottom;
-    if (!visible) {
-      el.scrollIntoView({ block: "center", behavior: "smooth" });
-    }
+    if (!visible) el.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [highlightRange]);
 
-  // Coalesce token updates to one render per frame.
+  // ---- the live reply ----------------------------------------------------------------
+  // Coalesce updates to one render per frame.
   function scheduleFrame() {
     if (rafRef.current) return;
     rafRef.current = requestAnimationFrame(() => {
       rafRef.current = 0;
-      const full = pendingRef.current;
-      setStreaming((s) => (s ? { text: full } : s));
+      const live = liveRef.current;
+      if (live) setStreaming({ text: live.visible() });
     });
   }
   function clearFrame() {
@@ -146,26 +173,58 @@ export default function ChatPanel({ conversation, setSpeaking }) {
     rafRef.current = 0;
   }
 
-  function commitAssistant(text, opts = {}) {
-    const id = "a" + Date.now();
-    setMessages((m) => [...m, { id, role: "assistant", content: text, ...opts }]);
+  /** File the live reply into the history (once) and clear the live bubble. */
+  function commitLive({ whole }) {
+    const live = liveRef.current;
+    if (!live) return null;
+    liveRef.current = null; // the guard against double commits: nothing is left to commit
+    clearFrame();
     setStreaming(null);
-    // Keep any active highlight: tts.highlighter clears it itself when speech ends.
-    setSpokenId(opts.error ? null : id);
+    const text = live.finalText(whole);
+    if (!text.trim()) return null;
+    const id = "a" + Date.now();
+    setMessages((m) => [...m, { id, role: "assistant", content: text }]);
+    // Unpaced text is filed while speech may still be going: the highlight follows it.
+    if (!live.paced && tts.busy) setSpokenId(id);
+    return id;
   }
 
+  /** The reply is complete AND (when paced) has been read to the end → file it away. */
+  function maybeFinish() {
+    const live = liveRef.current;
+    if (live && live.readyToCommit(tts.busy)) commitLive({ whole: true });
+  }
+
+  function addError(message) {
+    setMessages((m) => [...m, { id: "e" + Date.now(), role: "assistant", content: message, error: true }]);
+  }
+
+  /** Silence everything and drop the live reply WITHOUT filing it (the session changed). */
+  function discardAll() {
+    reqRef.current++;
+    abortRef.current?.abort();
+    clearFrame();
+    liveRef.current = null;
+    setStreaming(null);
+    setCaption("");
+    tts.cancel();
+    busyRef.current = false;
+    setBusy(false);
+    setHighlightRange(null);
+    setSpokenId(null);
+  }
+
+  // The Stop button, barge-in, and "a new message replaces the reply in progress".
   function stopAll() {
     reqRef.current++; // the in-flight request's handlers become no-ops (no double commit)
     abortRef.current?.abort();
-    clearFrame();
+    const live = liveRef.current;
+    // A reply that finished generating is complete (and saved) — keep all of it; one
+    // that was cut short keeps what the person has actually seen.
+    commitLive({ whole: !!live?.streamDone });
     tts.cancel();
-    setSpeaking(false);
-    setSpeakingLocal(false);
     busyRef.current = false;
     setBusy(false);
-    if (pendingRef.current.trim()) commitAssistant(pendingRef.current);
-    else setStreaming(null);
-    pendingRef.current = "";
     setHighlightRange(null);
     setSpokenId(null);
   }
@@ -175,21 +234,22 @@ export default function ChatPanel({ conversation, setSpeaking }) {
     const content = text.trim();
     const conv = convRef.current;
     if (!content || !conv) return;
-    if (busyRef.current) {
-      if (!interrupt) return;
-      stopAll();
-    }
+    if (busyRef.current && !interrupt) return;
+    if (busyRef.current || liveRef.current) stopAll(); // also covers "still being read aloud"
     const myReq = ++reqRef.current;
     busyRef.current = true;
     setDraft("");
+    setCaption("");
     setBusy(true);
     tts.cancel(); // silence the previous reply so its audio can't mix with this one
     tts.resetStream();
-    pendingRef.current = "";
     setHighlightRange(null);
     const ctrl = new AbortController();
     abortRef.current = ctrl;
 
+    const s = settingsRef.current;
+    const live = new LiveReply({ paced: !!(s.syncText && s.ttsEnabled) });
+    liveRef.current = live;
     setMessages((m) => [...m, { id: "u" + Date.now(), role: "user", content }]);
     setStreaming({ text: "" });
 
@@ -198,28 +258,32 @@ export default function ChatPanel({ conversation, setSpeaking }) {
         { conversationId: conv.id, content },
         (_, f) => {
           if (reqRef.current !== myReq) return;
-          pendingRef.current = f;
-          scheduleFrame();
+          live.tokens(f);
+          if (!live.paced) scheduleFrame();
         },
         ctrl.signal,
         (sentence) => {
-          if (reqRef.current === myReq) tts.speakSentence(sentence);
+          if (reqRef.current !== myReq) return;
+          live.sentence(sentence);
+          tts.speakSentence(sentence);
         },
       );
       if (reqRef.current !== myReq) return;
-      clearFrame();
-      commitAssistant(full);
+      live.complete(full);
+      busyRef.current = false;
+      setBusy(false);
+      if (live.paced) scheduleFrame();
+      maybeFinish(); // done already? otherwise it is filed when the last sentence has been read
     } catch (e) {
       if (reqRef.current !== myReq) return; // superseded or stopped: stopAll() already tidied up
-      clearFrame();
       if (e.name === "AbortError") {
-        if (pendingRef.current.trim()) commitAssistant(pendingRef.current);
-        else setStreaming(null);
+        commitLive({ whole: false });
       } else {
         // Keep whatever was already shown (the server saves partial replies too).
-        if (pendingRef.current.trim()) commitAssistant(pendingRef.current);
+        commitLive({ whole: false });
+        tts.cancel();
         const ref = e.requestId ? ` (ref ${e.requestId})` : "";
-        commitAssistant("\u26A0 " + e.message + ref, { error: true });
+        addError("⚠ " + e.message + ref);
       }
     } finally {
       if (reqRef.current === myReq) {
@@ -243,9 +307,11 @@ export default function ChatPanel({ conversation, setSpeaking }) {
     if (wantOn && !vcRef.current) {
       const vc = new VoiceController({
         deviceId: settings.micDeviceId,
+        live: settings.liveStt !== false,
         onState: setVoiceState,
         // Latest send()/stop via refs: this controller outlives many renders.
         onUtterance: (t) => sendRef.current?.(t, { interrupt: true }),
+        onInterim: setCaption,
         onBargeIn: () => stopRef.current?.(),
         isSpeaking: () => speechBus.speaking,
         onLevel: ({ level, threshold }) => {
@@ -273,6 +339,7 @@ export default function ChatPanel({ conversation, setSpeaking }) {
       vcRef.current = null;
       setVoiceState("idle");
       setTranscribing(false);
+      setCaption("");
     }
     return () => {
       if (!settings.voiceMode && vcRef.current) {
@@ -280,7 +347,7 @@ export default function ChatPanel({ conversation, setSpeaking }) {
         vcRef.current = null;
       }
     };
-  }, [settings.voiceMode, settings.micEnabled, settings.micDeviceId]);
+  }, [settings.voiceMode, settings.micEnabled, settings.micDeviceId, settings.liveStt]);
 
   useEffect(
     () => () => {
@@ -297,16 +364,29 @@ export default function ChatPanel({ conversation, setSpeaking }) {
 
   if (!conversation) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <p className="font-mono text-sm text-steel">
-          Select or create a conversation to begin.
-        </p>
+      <div className="flex h-full flex-col items-center justify-center gap-5 px-6">
+        <img
+          src={BRAND.logo}
+          alt="A.I.D.A — Artificial Intelligence · Desktop Assistant"
+          className="w-full max-w-[420px] select-none"
+          draggable={false}
+        />
+        <p className="font-mono text-sm text-steel">Select or create a conversation to begin.</p>
       </div>
     );
   }
 
   const listening = voiceState !== "idle";
-  const canStop = busy || speaking;
+  const canStop = busy || speaking || !!streaming;
+  const phase = capturing
+    ? "listening to you…"
+    : transcribing
+      ? "transcribing…"
+      : speaking
+        ? "speaking — talk to interrupt"
+        : busy
+          ? "thinking…"
+          : "awaiting your voice…";
 
   return (
     <div className="flex h-full flex-col">
@@ -330,6 +410,7 @@ export default function ChatPanel({ conversation, setSpeaking }) {
             markRef={markRef}
           />
         )}
+        {caption && <Bubble role="user" text={caption} ghost />}
       </div>
 
       <div className="border-t border-line bg-void-900/60 px-4 py-3">
@@ -338,13 +419,7 @@ export default function ChatPanel({ conversation, setSpeaking }) {
             {listening && (
               <div className="flex items-center gap-2 text-cyan">
                 <span className="h-2 w-2 animate-pulse rounded-full bg-cyan" />
-                <span>
-                  {voiceState === "capturing"
-                    ? "listening to you…"
-                    : transcribing
-                      ? "transcribing…"
-                      : "awaiting your voice…"}
-                </span>
+                <span>{phase}</span>
                 <span
                   className="h-1.5 w-28 overflow-hidden rounded-full bg-cyan/15"
                   title="Live microphone level"
@@ -375,7 +450,7 @@ export default function ChatPanel({ conversation, setSpeaking }) {
                 : "border-line text-steel hover:border-cyan/50 hover:text-cyan")
             }
           >
-            {settings.voiceMode ? "\u23F9" : "\u25CF"}
+            {settings.voiceMode ? "⏹" : "●"}
           </button>
           <textarea
             value={draft}
@@ -397,7 +472,7 @@ export default function ChatPanel({ conversation, setSpeaking }) {
               title="Stop generating / speaking"
               className="flex h-11 shrink-0 items-center gap-2 rounded-lg border border-crimson/50 bg-crimson/15 px-5 font-hud text-sm font-semibold uppercase tracking-wider text-crimson transition hover:bg-crimson/25"
             >
-              <span className="text-xs">{"\u25A0"}</span> Stop
+              <span className="text-xs">{"■"}</span> Stop
             </button>
           ) : (
             <button
@@ -437,7 +512,7 @@ function renderHighlighted(text, range, markRef) {
 }
 
 // Isolated so streaming updates only touch this one bubble.
-function Bubble({ role, text, error, streaming, highlightRange, markRef }) {
+function Bubble({ role, text, error, streaming, ghost, highlightRange, markRef }) {
   const isUser = role === "user";
   // lang lets the browser pick Bengali shaping/fonts and screen readers the right voice.
   const lang = detectLanguage(text) === "bn" ? "bn" : undefined;
@@ -447,18 +522,21 @@ function Bubble({ role, text, error, streaming, highlightRange, markRef }) {
         lang={lang}
         className={
           "max-w-[80%] whitespace-pre-wrap rounded-lg px-4 py-2.5 text-[13px] leading-relaxed " +
-          (isUser
-            ? "border border-cyan/25 bg-cyan/5 text-frost"
-            : error
-              ? "border border-crimson/40 bg-crimson/5 text-crimson"
-              : "border border-line bg-void-700/70 text-frost")
+          (ghost
+            ? "border border-dashed border-cyan/40 bg-cyan/5 italic text-frost/80"
+            : isUser
+              ? "border border-cyan/25 bg-cyan/5 text-frost"
+              : error
+                ? "border border-crimson/40 bg-crimson/5 text-crimson"
+                : "border border-line bg-void-700/70 text-frost")
         }
       >
         {!isUser && !error && <div className="label mb-1">aida</div>}
+        {ghost && <div className="label mb-1 not-italic">listening…</div>}
         {streaming && !text ? (
           <span className="animate-pulse font-mono text-xs text-steel">thinking…</span>
         ) : (
-          <span className={streaming ? "caret" : ""}>
+          <span className={streaming || ghost ? "caret" : ""}>
             {highlightRange ? renderHighlighted(text, highlightRange, markRef) : text}
           </span>
         )}

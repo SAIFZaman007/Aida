@@ -21,6 +21,8 @@ function createWindow() {
     minHeight: 640,
     backgroundColor: "#04070a",
     title: "A.I.D.A",
+    // Window / taskbar icon (installers use build/icon.*; this covers dev runs and Linux).
+    icon: path.join(__dirname, "..", "build", "icon.png"),
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,

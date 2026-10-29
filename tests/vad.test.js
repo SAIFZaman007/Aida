@@ -28,7 +28,7 @@ test("one utterance -> one segment with pre-roll and a short tail", () => {
   assert.equal(out.segments.length, 1);
   const n = out.segments[0].length;
   assert.ok(n >= 30 + 12, `segment too short: ${n}`); // speech + kept tail
-  assert.ok(n <= 25 + 30 + 42, `segment too long: ${n}`);
+  assert.ok(n <= 25 + 30 + 34, `segment too long: ${n}`);
   // pre-roll: the segment starts with quiet frames, i.e. the onset was not clipped
   assert.ok(rms(out.segments[0][0]) < 0.01);
   assert.ok(out.segments[0].slice(0, 30).some((f) => rms(f) > 0.1));
@@ -44,7 +44,7 @@ test("a short click is ignored", () => {
 test("a pause inside a sentence does not split it", () => {
   const { v, out } = make();
   feed(v, speech, 20);
-  feed(v, quiet, 25); // 500 ms thinking pause < 840 ms
+  feed(v, quiet, 25); // 500 ms thinking pause < 680 ms
   feed(v, speech, 20);
   feed(v, quiet, 60);
   assert.equal(out.segments.length, 1);
@@ -124,3 +124,50 @@ for (const rate of [48000, 44100, 16000]) {
     assert.ok(ok);
   });
 }
+
+// ------------------------------------------------------------------ streaming view
+function makeStreaming(opts = {}) {
+  const out = { starts: [], frames: 0, ends: [], segments: 0 };
+  const v = new VadSegmenter({
+    isSpeaking: opts.isSpeaking,
+    onStart: (pre) => out.starts.push(pre.length),
+    onFrame: () => out.frames++,
+    onEnd: (e) => out.ends.push(e),
+    onSegment: () => out.segments++,
+  });
+  feed(v, quiet, 25);
+  return { v, out };
+}
+
+test("streaming: onStart carries the pre-roll, onFrame every later frame, onEnd once", () => {
+  const { v, out } = makeStreaming();
+  feed(v, quiet, 10);
+  feed(v, speech, 30);
+  feed(v, quiet, 60);
+  assert.equal(out.starts.length, 1);
+  assert.ok(out.starts[0] >= 10 && out.starts[0] <= 25 + 3, `pre-roll ${out.starts[0]}`);
+  assert.equal(out.ends.length, 1);
+  assert.equal(out.ends[0].valid, true);
+  // everything sent through onStart + onFrame is exactly what the whole segment contains
+  // the streamed audio (pre-roll + frames) is the whole segment, including the not-yet-trimmed tail
+  assert.ok(out.starts[0] + out.frames >= out.ends[0].frames.length);
+  assert.equal(out.segments, 1);
+});
+
+test("streaming: a click still ends (so the server can drop it) but is marked invalid", () => {
+  const { v, out } = makeStreaming();
+  feed(v, speech, 4);
+  feed(v, quiet, 80);
+  assert.equal(out.ends.length, 1);
+  assert.equal(out.ends[0].valid, false);
+  assert.equal(out.segments, 0);
+});
+
+test("the end-of-speech silence is configurable", () => {
+  const out = { segments: 0 };
+  const v = new VadSegmenter({ endSilenceFrames: 10, onSegment: () => out.segments++ });
+  feed(v, quiet, 25);
+  feed(v, speech, 20);
+  feed(v, quiet, 12);
+  assert.equal(out.segments, 1);
+});

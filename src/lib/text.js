@@ -239,3 +239,46 @@ export function mapMarksToRaw(marks, spokenLen, raw) {
   }
   return out;
 }
+
+// ---- word timing estimated on the DISPLAYED sentence --------------------------
+// The streaming voice endpoint sends audio only (no word marks), so karaoke
+// timing is estimated straight from the text being shown: each word gets time in
+// proportion to its length, punctuation adds a natural pause, and the whole is
+// stretched over the clip's duration. Offsets index into `raw` itself, so no
+// spoken-vs-displayed mapping is needed.
+const PAUSE_WEIGHT = [
+  [/[.!?।॥…]+["')\]”’]*$/u, 4],
+  [/[,;:—–]+["')\]”’]*$/u, 2],
+];
+
+/** [{word, start, end, char_start, char_end}] — seconds relative to the audio start. */
+export function estimateWordMarks(raw, duration) {
+  const spans = rawWordSpans(raw);
+  if (!spans.length || !(duration > 0)) return [];
+  const weights = spans.map(({ start, end }) => {
+    const word = raw.slice(start, end);
+    let w = hasSpeakable(word) ? Array.from(word).length : 0.5; // bare markup ("-", "###") is nearly silent
+    for (const [re, extra] of PAUSE_WEIGHT) {
+      if (re.test(word)) {
+        w += extra;
+        break;
+      }
+    }
+    return w;
+  });
+  const total = weights.reduce((a, b) => a + b, 0) || 1;
+  const marks = [];
+  let t = 0;
+  spans.forEach((s, i) => {
+    const span = duration * (weights[i] / total);
+    marks.push({
+      word: raw.slice(s.start, s.end),
+      start: t,
+      end: t + span,
+      char_start: s.start,
+      char_end: s.end,
+    });
+    t += span;
+  });
+  return marks;
+}

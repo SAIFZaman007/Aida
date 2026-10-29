@@ -152,6 +152,26 @@ test("speakMarks decodes base64 WAV into an ArrayBuffer and passes the abort sig
   assert.deepEqual(JSON.parse(calls[0].opts.body), { text: "hi", gender: "male" });
 });
 
+test("speakStream yields PCM chunks and reads the sample rate header", async () => {
+  mockFetch(() => new Response(streamOf([Uint8Array.of(1, 2, 3, 4), Uint8Array.of(5, 6)]), { status: 200, headers: { "x-sample-rate": "24000" } }));
+  const s = await api.speakStream("hi", "male");
+  assert.equal(s.sampleRate, 24000);
+  const got = [];
+  for await (const c of s.chunks) got.push([...c]);
+  assert.deepEqual(got, [[1, 2, 3, 4], [5, 6]]);
+});
+
+test("speakStream sends the gender and rejects BEFORE any audio when the voice is down", async () => {
+  const calls = mockFetch(() => jsonResponse(503, { detail: { code: "unavailable", message: "Voice down" } }));
+  await assert.rejects(api.speakStream("hi", "male"), (e) => e instanceof ApiError && e.code === "unavailable");
+  assert.equal(JSON.parse(calls[0].opts.body).gender, "male");
+  assert.ok(calls[0].url.endsWith("/voice/speak_stream"));
+});
+
+test("liveSttUrl is the API base on ws(s)", () => {
+  assert.equal(api.liveSttUrl(), "ws://127.0.0.1:8000/api/voice/stream");
+});
+
 test("speakMarks surfaces the backend's coded 503", async () => {
   mockFetch(() => jsonResponse(503, { detail: { code: "not_configured", message: "not set up" } }));
   await assert.rejects(api.speakMarks("hi"), (e) => e.code === "not_configured");

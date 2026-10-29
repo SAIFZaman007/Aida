@@ -1,14 +1,25 @@
-Place your avatar models here:
+Avatars — one per mode
+======================
 
-  female.glb   (default)
-  male.glb
+Each mode has its own avatar. Selecting a mode in the app switches to its avatar,
+and the voice changes with it (male / female).
 
-Create them free at https://readyplayer.me (choose a realistic avatar), then
-export WITH morph targets so expressions and lip-sync work. Use a URL like:
+File name -> mode (voice)
+  non-stop.glb    Non-stop    (male)
+  executive.glb   Executive   (male)
+  coder.glb       Coder       (male)
+  architect.glb   Architect   (male)
+  security.glb    Security    (male)
+  researcher.glb  Researcher  (male)
+  writer.glb      Writer      (female)
 
-  https://models.readyplayer.me/<YOUR_ID>.glb?morphTargets=ARKit,Oculus%20Visemes&textureAtlas=1024&pose=A
+To replace an avatar: drop a new .glb here with the SAME file name. To change a
+voice gender or add a mode: edit src/lib/avatars.js (and src/lib/modes.js).
 
-Download each, rename to female.glb / male.glb, and drop them in this folder.
-
-No files yet? The app shows a clean animated "AI core" placeholder instead of a
-cartoon face, and never crashes. Switch avatars anytime in Settings (gear icon).
+What the app does with any humanoid model
+  - scales it to one common height and frames it head-and-torso
+  - gives it a relaxed professional posture (arms down, elbows slightly bent)
+  - adds breathing, head and eye movement, blinks and hand gestures while speaking
+  - animates the mouth from the real voice when the model has mouth morph targets
+Models are not modified on disk. If a file is missing or is not a valid .glb, the
+app shows an animated "AI core" instead and keeps working.

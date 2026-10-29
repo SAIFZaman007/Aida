@@ -9,7 +9,7 @@
   of simultaneous TTS calls at the paid API / the per-IP rate limit.
 */
 export class CircuitBreaker {
-  constructor({ failLimit = 3, openMs = 60_000, hardOpenMs = 600_000, now = () => Date.now() } = {}) {
+  constructor({ failLimit = 2, openMs = 60_000, hardOpenMs = 600_000, now = () => Date.now() } = {}) {
     this.failLimit = failLimit;
     this.openMs = openMs;
     this.hardOpenMs = hardOpenMs;

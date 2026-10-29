@@ -1,10 +1,15 @@
 /*
   voice.js — hands-free microphone input with barge-in.
 
-  Pipeline:
+  Pipeline (real time):
     mic -> AudioWorklet (PCM) -> 16 kHz frames -> VadSegmenter (lib/vad.js)
-        -> one WAV per utterance -> POST /voice/transcribe (Gemini; Bengali +
-        English) -> text -> onUtterance()
+        -> LIVE: frames stream over a WebSocket while the person talks
+           (lib/liveStt.js -> Gemini Live transcription): captions appear as they
+           speak and the final text arrives a moment after they stop
+        -> FALLBACK: if live is unavailable or fails, the SAME audio (kept in
+           memory) goes once over HTTP (POST /voice/transcribe)
+        -> text -> onUtterance()
+    lib/transcriber.js owns the routing and keeps results in spoken order.
 
   Behaviour contract:
     • The user can interrupt the avatar: when speech is detected while the
@@ -19,7 +24,24 @@
   State (onState): idle -> listening <-> capturing
 */
 import { api } from "./api.js";
+import { LiveStt } from "./liveStt.js";
+import { Transcriber } from "./transcriber.js";
 import { Resampler, VadSegmenter, encodeWav } from "./vad.js";
+
+const HTTP_TIMEOUT_MS = 25_000; // never let one stuck upload block every later utterance
+
+async function transcribeOverHttp(frames) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), HTTP_TIMEOUT_MS);
+  try {
+    return await api.transcribe(encodeWav(frames), { signal: ctrl.signal });
+  } catch (e) {
+    if (e?.name === "AbortError") throw new Error("Speech recognition took too long. Please try again.");
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 const WORKLET_SRC = `
 class AidaPcmTap extends AudioWorkletProcessor {
@@ -66,15 +88,18 @@ export class VoiceController {
     deviceId = "",
     onState,
     onUtterance,
+    onInterim,
     onBargeIn,
     isSpeaking,
     onLevel,
     onStatus,
     onFatal,
+    live = true,
   }) {
     this.deviceId = deviceId;
     this.onState = onState || (() => {});
     this.onUtterance = onUtterance || (() => {});
+    this.onInterim = onInterim || (() => {});
     this.onBargeIn = onBargeIn || (() => {});
     this.isSpeaking = isSpeaking || (() => false);
     this.onLevel = onLevel || (() => {});
@@ -86,10 +111,23 @@ export class VoiceController {
     this.node = null;
     this.sink = null;
     this.resampler = null;
-    this.chain = Promise.resolve(); // keeps utterances in spoken order
-    this.pending = 0;
     this.state = "idle";
     this.stopped = false;
+
+    this.tr = new Transcriber({
+      createLive: live
+        ? (h) => new LiveStt({ url: api.liveSttUrl(), ...h, onStatus: () => {} })
+        : () => null,
+      http: transcribeOverHttp,
+      onInterim: (t) => this.onInterim(t),
+      onText: (text) => {
+        this.onStatus({ kind: "info", text: "" });
+        this.onUtterance(text);
+      },
+      onNoSpeech: () => this.onStatus({ kind: "info", text: "Didn't catch that — please say it again." }),
+      onError: (text) => this.onStatus({ kind: "error", text: text || "Speech recognition is unavailable right now." }),
+      onBusy: (busy) => this.onStatus({ kind: "busy", text: busy ? "transcribing…" : "" }),
+    });
 
     this.vad = new VadSegmenter({
       isSpeaking: () => this.isSpeaking(),
@@ -98,7 +136,9 @@ export class VoiceController {
         this.onLevel(l);
         this._syncState(l.state);
       },
-      onSegment: (frames) => this._enqueue(encodeWav(frames)),
+      onStart: (pre) => this.tr.begin(pre),
+      onFrame: (f) => this.tr.audio(f),
+      onEnd: (e) => this.tr.end(e),
     });
   }
 
@@ -145,6 +185,7 @@ export class VoiceController {
 
     this.vad.reset();
     this._syncState("calibrating");
+    this.tr.connect(); // open the live socket now, so the first sentence needs no connect time
   }
 
   _onVisible = () => {
@@ -209,32 +250,6 @@ export class VoiceController {
     }
   }
 
-  _enqueue(blob) {
-    this.pending++;
-    this.onStatus({ kind: "busy", text: "transcribing…" });
-    this.chain = this.chain.then(() => this._transcribe(blob)).catch(() => {});
-  }
-
-  async _transcribe(blob) {
-    try {
-      const res = await api.transcribe(blob);
-      const text = (res.text || "").trim();
-      if (res.error) {
-        this.onStatus({ kind: "error", text: res.message || "Speech recognition is unavailable right now." });
-      } else if (!text) {
-        this.onStatus({ kind: "info", text: "Didn't catch that — please say it again." });
-      } else {
-        this.onStatus({ kind: "info", text: "" });
-        this.onUtterance(text);
-      }
-    } catch (e) {
-      this.onStatus({ kind: "error", text: e?.message || "Could not reach the server." });
-    } finally {
-      this.pending--;
-      if (this.pending === 0) this.onStatus({ kind: "busy", text: "" });
-    }
-  }
-
   stop() {
     this.stopped = true;
     document.removeEventListener("visibilitychange", this._onVisible);
@@ -258,8 +273,10 @@ export class VoiceController {
     }
     this.ctx = null;
     this.vad.reset();
+    this.tr.dispose();
     this.state = "idle";
     this.onState("idle");
+    this.onInterim("");
     this.onLevel({ level: 0, threshold: 0, state: "idle" });
   }
 }

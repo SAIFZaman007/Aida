@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { useSettings, updateSettings } from "../lib/settings.js";
-import { AVATARS } from "../lib/avatars.js";
+import { allAvatars } from "../lib/avatars.js";
 
 /*
   Settings — a clean, scalable preferences panel.
 
-  Grouped into Avatar / Voice / Microphone / Conversation so new options slot in
-  without redesigning anything. Every change writes through updateSettings(),
-  which persists to localStorage immediately, so choices survive restarts and
-  the voice never reverts to a random gender.
+  Grouped into Avatar & voice / Voice / Microphone / Conversation so new options
+  slot in without redesigning anything. Every change writes through
+  updateSettings(), which persists to localStorage immediately.
+
+  The avatar is NOT chosen here: each mode has its own avatar (and its voice
+  gender), so picking a mode on the main screen picks both.
 */
 export default function Settings({ open, onClose }) {
   const s = useSettings();
@@ -50,48 +52,21 @@ export default function Settings({ open, onClose }) {
           </button>
         </div>
 
-        {/* Avatar */}
+        {/* Avatar & voice follow the mode */}
         <section className="mb-6">
-          <p className="label mb-2">Avatar</p>
-          <div className="grid grid-cols-2 gap-2">
-            {Object.values(AVATARS).map((a) => (
-              <button
-                key={a.id}
-                onClick={() => updateSettings({ avatar: a.id, voiceURI: "" })}
-                className={
-                  "rounded-lg border p-3 text-left transition " +
-                  (s.avatar === a.id
-                    ? "border-cyan/60 bg-cyan/10"
-                    : "border-line hover:border-cyan/40")
-                }
-              >
-                <div className="font-hud text-sm text-frost">{a.label}</div>
-                <div className="font-mono text-[10px] text-steel">{a.role}</div>
-              </button>
+          <p className="label mb-2">Avatar &amp; voice</p>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+            {allAvatars().map((a) => (
+              <div key={a.id} className="flex items-center justify-between font-mono text-[11px]">
+                <span className="text-frost/80">{a.label}</span>
+                <span className="text-steel">{a.gender === "female" ? "female voice" : "male voice"}</span>
+              </div>
             ))}
           </div>
           <p className="mt-2 font-mono text-[10px] text-steel/60">
-            Changing the avatar re-picks a matching voice automatically.
+            Each mode has its own avatar, and the voice changes with it. Choose the mode on the main
+            screen; the avatar and voice switch automatically.
           </p>
-          <div className="mt-3 space-y-2">
-            <p className="label">Custom model URLs (optional)</p>
-            <input
-              value={s.customAvatarFemale}
-              onChange={(e) => updateSettings({ customAvatarFemale: e.target.value })}
-              placeholder="Female .glb URL (e.g. https://models.readyplayer.me/<id>.glb)"
-              className="w-full rounded-md border border-line bg-void-700 px-2 py-1.5 font-mono text-[11px] text-frost placeholder:text-steel/40 focus:border-cyan/50 focus:outline-hidden"
-            />
-            <input
-              value={s.customAvatarMale}
-              onChange={(e) => updateSettings({ customAvatarMale: e.target.value })}
-              placeholder="Male .glb URL"
-              className="w-full rounded-md border border-line bg-void-700 px-2 py-1.5 font-mono text-[11px] text-frost placeholder:text-steel/40 focus:border-cyan/50 focus:outline-hidden"
-            />
-            <p className="font-mono text-[10px] text-steel/60">
-              Paste any hosted .glb (ARKit/Oculus morph targets recommended). Leave
-              blank to use the local file in public/avatars/.
-            </p>
-          </div>
         </section>
 
         {/* Voice */}
@@ -103,6 +78,16 @@ export default function Settings({ open, onClose }) {
               onClick={() => updateSettings({ ttsEnabled: !s.ttsEnabled })}
             />
           </Row>
+          <Row label="Reveal text with the voice">
+            <Toggle
+              on={s.syncText}
+              onClick={() => updateSettings({ syncText: !s.syncText })}
+            />
+          </Row>
+          <p className="font-mono text-[10px] text-steel/60">
+            On: each sentence appears as it starts being read, then the next, until the reply is
+            finished. Off: the text streams as fast as it is written.
+          </p>
           <Row label="Engine">
             <select
               value={s.ttsProvider}
@@ -161,6 +146,12 @@ export default function Settings({ open, onClose }) {
               onClick={() => updateSettings({ micEnabled: !s.micEnabled })}
             />
           </Row>
+          <Row label="Live captions while I speak">
+            <Toggle
+              on={s.liveStt !== false}
+              onClick={() => updateSettings({ liveStt: s.liveStt === false })}
+            />
+          </Row>
           <Row label="Input device">
             <select
               value={s.micDeviceId}
@@ -187,7 +178,7 @@ export default function Settings({ open, onClose }) {
             />
           </Row>
           <p className="font-mono text-[10px] text-steel/60">
-            In voice mode AIDA listens continuously; speaking over her stops her
+            In voice mode AIDA listens continuously; speaking over the avatar stops it
             instantly. Headphones recommended to prevent echo.
           </p>
         </section>

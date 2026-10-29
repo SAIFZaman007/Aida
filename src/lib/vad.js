@@ -4,9 +4,13 @@
   Kept separate from voice.js so it can be unit-tested with synthetic audio.
 
   Input : consecutive 20 ms frames of 16 kHz mono Float32 samples.
-  Output: one `onSegment(frames)` per spoken utterance, INCLUDING a short
-          pre-roll (so the first syllable is never clipped) and a short
-          trailing pad.
+  Output (two views of the same utterance):
+    • STREAMING — onStart(preroll) when speech begins, onFrame(frame) for every
+      frame after that, onEnd({frames, voiced, valid}) when the person stops.
+      Feeds live transcription, so audio leaves the browser WHILE they talk.
+    • WHOLE — onSegment(frames) once per valid utterance, INCLUDING a short
+      pre-roll (so the first syllable is never clipped) and a short trailing
+      pad. Used for the one-shot HTTP fallback.
 
   Why not MediaRecorder-per-utterance (the old approach): the recorder only
   starts after speech is detected, so the first ~150-250 ms — often the whole
@@ -20,7 +24,7 @@ export const FRAME = 320; // 20 ms
 const PREROLL_FRAMES = 25; // 500 ms kept from before the onset
 const ONSET_FRAMES = 3; // 60 ms above threshold = speech started
 const BARGE_FRAMES = 6; // 120 ms while the assistant talks = interruption
-const END_SILENCE_FRAMES = 42; // ~840 ms quiet = the user finished
+const END_SILENCE_FRAMES = 34; // ~680 ms quiet = the user finished (was 840)
 const KEEP_TAIL_FRAMES = 12; // trailing silence kept (240 ms)
 const MIN_VOICED_FRAMES = 8; // < 160 ms of voice = noise/click, ignored
 const MAX_SEGMENT_FRAMES = 1250; // 25 s hard cap
@@ -35,11 +39,15 @@ export function rms(frame) {
 }
 
 export class VadSegmenter {
-  constructor({ isSpeaking, onBargeIn, onSegment, onLevel } = {}) {
+  constructor({ isSpeaking, onBargeIn, onSegment, onLevel, onStart, onFrame, onEnd, endSilenceFrames } = {}) {
     this.isSpeaking = isSpeaking || (() => false);
     this.onBargeIn = onBargeIn || (() => {});
     this.onSegment = onSegment || (() => {});
     this.onLevel = onLevel || (() => {});
+    this.onStart = onStart || (() => {});
+    this.onFrame = onFrame || (() => {});
+    this.onEnd = onEnd || (() => {});
+    this.endSilenceFrames = endSilenceFrames || END_SILENCE_FRAMES;
     this.reset();
   }
 
@@ -97,12 +105,14 @@ export class VadSegmenter {
         this.voiced = this.loudRun;
         this.silenceRun = 0;
         this.state = "capturing";
+        this.onStart(this.seg.slice()); // pre-roll + the frames that triggered detection
       }
       return;
     }
 
     // capturing
     this.seg.push(frame);
+    this.onFrame(frame);
     // End-of-speech uses a lower bar than onset (hysteresis) but always above
     // the room's own noise, otherwise a noisy room never "goes quiet".
     const off = Math.max(th * 0.6, this.noise * 1.3);
@@ -112,7 +122,7 @@ export class VadSegmenter {
     } else {
       this.silenceRun++;
     }
-    if (this.silenceRun >= END_SILENCE_FRAMES || this.seg.length >= MAX_SEGMENT_FRAMES) {
+    if (this.silenceRun >= this.endSilenceFrames || this.seg.length >= MAX_SEGMENT_FRAMES) {
       this._finish();
     }
   }
@@ -127,7 +137,9 @@ export class VadSegmenter {
     this.silenceRun = 0;
     this.voiced = 0;
     this.state = "listening";
-    if (voiced >= MIN_VOICED_FRAMES) this.onSegment(frames);
+    const valid = voiced >= MIN_VOICED_FRAMES; // shorter = a click or cough, not speech
+    this.onEnd({ frames, voiced, valid });
+    if (valid) this.onSegment(frames);
   }
 }
 

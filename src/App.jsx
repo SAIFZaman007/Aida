@@ -1,28 +1,17 @@
-import { useEffect, useState } from "react";
-import AvatarStage from "./components/AvatarStage.jsx";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import ChatPanel from "./components/ChatPanel.jsx";
 import Settings from "./components/Settings.jsx";
 import Dialog from "./components/Dialog.jsx";
 import { api } from "./lib/api.js";
 import { useSettings, updateSettings } from "./lib/settings.js";
-import { getAvatar, resolveAvatarUrl } from "./lib/avatars.js";
+import { avatarForPersona, DEFAULT_PERSONA } from "./lib/avatars.js";
+import { MODES, MODE_LABEL, MODE_HINT } from "./lib/modes.js";
+import { BRAND } from "./lib/brand.js";
 
-// Modes shown in the picker. "developer" and "ccna_trainer" still exist on the
-// backend so older sessions keep working; they are just not offered for new ones.
-const PERSONAS = [
-  ["nonstop", "Non-stop"],
-  ["executive", "Executive"],
-  ["coder", "Coder"],
-  ["architect", "Architect"],
-  ["security", "Security"],
-  ["researcher", "Researcher"],
-  ["writer", "Writer"],
-];
-const PERSONA_LABEL = {
-  ...Object.fromEntries(PERSONAS),
-  developer: "Developer",
-  ccna_trainer: "CCNA",
-};
+// The 3D stage (three.js, ~1 MB) loads on its own, so the chat UI is interactive first.
+const AvatarStage = lazy(() => import("./components/AvatarStage.jsx"));
+
+const IDLE = { speaking: false, listening: false, thinking: false };
 
 export default function App() {
   const settings = useSettings();
@@ -30,14 +19,28 @@ export default function App() {
   const [project, setProject] = useState(null);
   const [conversations, setConversations] = useState([]);
   const [conversation, setConversation] = useState(null);
-  const [persona, setPersona] = useState("executive");
-  const [speaking, setSpeaking] = useState(false);
+  const [persona, setPersona] = useState(DEFAULT_PERSONA); // the mode for NEW sessions (no session open)
+  const [activity, setActivity] = useState(IDLE); // what the avatar is doing: speaking / listening / thinking
+  const [modeNote, setModeNote] = useState("");
+  const noteTimer = useRef(0);
   const [status, setStatus] = useState({ online: false, model: "—" });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [dialog, setDialog] = useState(null);
 
-  const avatar = getAvatar(settings.avatar);
-  const avatarUrl = resolveAvatarUrl(settings, avatar);
+  // One avatar per mode. With a session open, the session's mode decides; otherwise the
+  // mode chosen for new sessions. The avatar carries the voice gender (see lib/avatars.js).
+  const activePersona = conversation?.persona ?? persona;
+  const avatar = avatarForPersona(activePersona);
+
+  const handleActivity = useCallback(
+    (next) =>
+      setActivity((prev) =>
+        prev.speaking === next.speaking && prev.listening === next.listening && prev.thinking === next.thinking
+          ? prev
+          : next,
+      ),
+    [],
+  );
 
   useEffect(() => {
     const checkHealth = () =>
@@ -110,7 +113,7 @@ export default function App() {
   // ---- Conversations CRUD ----
   async function newConversation() {
     if (!project) return;
-    const c = await api.createConversation(project.id, "New session", persona);
+    const c = await api.createConversation(project.id, "New session", activePersona);
     setConversations((cs) => [c, ...cs]);
     setConversation(c);
   }
@@ -135,6 +138,35 @@ export default function App() {
       updateSettings({ voiceMode: true });
     } catch {
       /* offline: the status badge already says so; the mode stays selected */
+    }
+  }
+  function flashModeNote(text) {
+    clearTimeout(noteTimer.current);
+    setModeNote(text);
+    noteTimer.current = setTimeout(() => setModeNote(""), 5000);
+  }
+  // Picking a mode picks its avatar (and voice). With a session open the session switches
+  // too, so the avatar you see is always the one answering.
+  async function selectMode(id) {
+    if (id === "nonstop") {
+      if (conversation?.persona === "nonstop") {
+        updateSettings({ voiceMode: true });
+        return;
+      }
+      return startNonstop();
+    }
+    if (!conversation) {
+      setPersona(id);
+      return;
+    }
+    if (conversation.persona === id) return;
+    try {
+      const uc = await api.updateConversation(conversation.id, { persona: id });
+      setConversations((cs) => cs.map((x) => (x.id === uc.id ? uc : x)));
+      setConversation((cur) => (cur?.id === uc.id ? uc : cur));
+      setPersona(id);
+    } catch {
+      flashModeNote("Could not switch mode — check the connection and try again.");
     }
   }
   function renameConversation(c) {
@@ -168,10 +200,18 @@ export default function App() {
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden">
       {/* ── Top status bar ── */}
-      <header className="flex items-center justify-between border-b border-line px-6 py-3">
-        <div className="flex items-baseline gap-3">
+      <header className="flex items-center justify-between border-b border-line px-6 py-2.5">
+        <div className="flex items-center gap-3">
+          <img
+            src={BRAND.mark}
+            alt=""
+            width={40}
+            height={40}
+            className="h-10 w-10 rounded-xl shadow-glow"
+            draggable={false}
+          />
           <span className="font-hud text-2xl font-bold tracking-[0.3em] text-frost">A.I.D.A</span>
-          <span className="label">artificial intelligence · desktop assistant</span>
+          <span className="label hidden lg:inline">artificial intelligence · desktop assistant</span>
         </div>
         <div className="flex items-center gap-5 font-mono text-[11px]">
           <span className="text-steel">
@@ -287,18 +327,27 @@ export default function App() {
         {/* ── Center: avatar core ── */}
         <section className="relative flex w-[38%] min-w-[340px] flex-col border-r border-line">
           <div className="min-h-0 flex-1">
-            <AvatarStage avatarUrl={avatarUrl} speaking={speaking} />
+            <Suspense
+              fallback={
+                <div className="flex h-full items-center justify-center font-mono text-[11px] uppercase tracking-widest text-steel">
+                  loading avatar…
+                </div>
+              }
+            >
+              <AvatarStage avatar={avatar} activity={activity} />
+            </Suspense>
           </div>
           <div className="brackets m-4 panel p-3">
             <span className="label">Mode</span>
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {PERSONAS.map(([id, label]) => (
+              {MODES.map(([id, label]) => (
                 <button
                   key={id}
-                  onClick={() => (id === "nonstop" ? startNonstop() : setPersona(id))}
+                  onClick={() => selectMode(id)}
+                  aria-pressed={activePersona === id}
                   className={
                     "rounded-md border px-2.5 py-1 font-hud text-[11px] uppercase tracking-wider transition " +
-                    (persona === id
+                    (activePersona === id
                       ? "border-cyan/60 bg-cyan/15 text-cyan"
                       : "border-line text-steel hover:border-cyan/40 hover:text-frost")
                   }
@@ -307,10 +356,15 @@ export default function App() {
                 </button>
               ))}
             </div>
-            <p className="mt-2 font-mono text-[10px] text-steel/60">
-              {persona === "nonstop"
-                ? "Non-stop: just talk — the mic stays on and replies are spoken."
-                : "New sessions use this mode."}
+            <p
+              role="status"
+              className={"mt-2 font-mono text-[10px] " + (modeNote ? "text-crimson" : "text-steel/60")}
+            >
+              {modeNote ||
+                MODE_HINT[activePersona] ||
+                (conversation
+                  ? "Each mode has its own avatar and voice."
+                  : "New sessions use this mode. Each mode has its own avatar and voice.")}
             </p>
           </div>
         </section>
@@ -324,12 +378,12 @@ export default function App() {
               </h2>
               <span className="label">
                 {project ? project.name : "no project"} ·{" "}
-                {PERSONA_LABEL[conversation?.persona ?? persona] ?? conversation?.persona ?? persona}
+                {MODE_LABEL[activePersona] ?? activePersona}
               </span>
             </div>
           </div>
           <div className="min-h-0 flex-1">
-            <ChatPanel conversation={conversation} setSpeaking={setSpeaking} />
+            <ChatPanel conversation={conversation} avatar={avatar} onActivity={handleActivity} />
           </div>
         </main>
       </div>
