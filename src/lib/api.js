@@ -129,12 +129,14 @@ export const api = {
 
   // Streaming chat — named SSE events: token / sentence / done / error.
   //   sentence payload: { index, text, code }  (`code` = fenced code, never spoken)
-  async streamChat({ conversationId, content, remember = true }, onToken, signal, onSentence) {
+  async streamChat({ conversationId, content, remember = true, persona }, onToken, signal, onSentence) {
     setUiLang(detectLanguage(content));
     const res = await request("/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ conversation_id: conversationId, content, remember }),
+      // `persona` = the mode on screen: it wins over the stored one, so a reply can never be
+      // written by a different mode than the avatar the person is looking at.
+      body: JSON.stringify({ conversation_id: conversationId, content, remember, ...(persona ? { persona } : {}) }),
       signal,
     });
     if (!res.body) throw new ApiError(msg("generic"), { status: res.status });

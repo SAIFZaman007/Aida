@@ -71,6 +71,39 @@ export function isForeignScript(text, allowed = DEFAULT_SCRIPTS, limit = FOREIGN
   return foreignScriptShare(text, allowed) >= limit;
 }
 
+// ---- "there was no speech" phrases -----------------------------------------------
+// Speech models answer silence/noise with stock phrases ("Thanks for watching", "[silence]",
+// or even the assistant's own "Didn't catch that. Please say it again."). Those are never
+// something the person said, so they are dropped instead of being sent as a chat message.
+// Only assistant-voiced / caption forms are listed: a person's own "I didn't catch that,
+// can you say it again?" is a real request and is kept. Mirrors backend core/text.py
+// is_noise_phrase; both sides pass the same `noise_phrase` vectors.
+const NOISE_WORDS = new Set([
+  "silence", "music", "noise", "static", "inaudible", "unintelligible", "applause",
+  "laughter", "blank audio", "no audio", "background noise", "no speech",
+  "no speech detected", "no speech detected in the audio",
+]);
+const NOISE_PATTERNS = [
+  /^(sorry )?(didn't|did not|couldn't|could not) (quite )?(catch|hear|get|understand) (that|you|it)( (please )?(say|repeat|try)( that| it)?( again)?)?$/u,
+  /^(thank you|thanks) for watching( this video)?$/u,
+  /^(please )?subscribe( to my channel)?$/u,
+  /^subtitles by .{0,40}$/u,
+  /^(দুঃখিত )?(আমি )?(ঠিক )?(বুঝতে|শুনতে) (পারিনি|পাইনি)( (দয়া করে )?(আবার|আরেকবার) বলুন)?$/u,
+];
+
+/** Lower-case words only: punctuation, brackets and symbols become spaces. */
+function plainWords(text) {
+  const t = String(text || "").toLowerCase().replace(/[\u2019\u2018]/g, "'");
+  return t.replace(/[^\p{L}\p{M}\p{N}']+/gu, " ").trim().replace(/\s+/g, " ");
+}
+
+/** True when the whole transcript is a known "there was no speech" phrase. */
+export function isNoisePhrase(text) {
+  const t = plainWords(text);
+  if (!t || t.split(" ").length > 12) return false;
+  return NOISE_WORDS.has(t) || NOISE_PATTERNS.some((re) => re.test(t));
+}
+
 // ---- markdown -> plain speech text ------------------------------------------
 /** Remove markdown/markup so only speakable prose remains. Never touches
  *  Bengali characters (ZWJ/ZWNJ are part of Bengali spelling and are kept). */

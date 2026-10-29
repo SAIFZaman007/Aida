@@ -117,11 +117,17 @@ export default function App() {
     setConversations((cs) => [c, ...cs]);
     setConversation(c);
   }
-  // Non-stop = open, hands-free voice conversation. One click: make sure a
-  // project exists, start a Non-stop session in it and switch the mic on.
+  // Non-stop = open, hands-free voice conversation. With no session open: make sure a
+  // project exists, open (or start) a Non-stop session in it and switch the mic on.
   async function startNonstop() {
     setPersona("nonstop");
+    updateSettings({ voiceMode: true });
     try {
+      const existing = project && conversations.find((x) => x.persona === "nonstop");
+      if (existing) {
+        setConversation(existing); // instant: no network round trip
+        return;
+      }
       let proj = project;
       let created = null;
       if (!proj) {
@@ -135,7 +141,6 @@ export default function App() {
       }
       setConversations((cs) => [c, ...cs.filter((x) => x.id !== c.id)]);
       setConversation(c);
-      updateSettings({ voiceMode: true });
     } catch {
       /* offline: the status badge already says so; the mode stays selected */
     }
@@ -145,29 +150,44 @@ export default function App() {
     setModeNote(text);
     noteTimer.current = setTimeout(() => setModeNote(""), 5000);
   }
-  // Picking a mode picks its avatar (and voice). With a session open the session switches
-  // too, so the avatar you see is always the one answering.
-  async function selectMode(id) {
-    if (id === "nonstop") {
-      if (conversation?.persona === "nonstop") {
-        updateSettings({ voiceMode: true });
-        return;
-      }
-      return startNonstop();
-    }
+  // Picking a mode picks its avatar (and voice) AT ONCE: the picker, the avatar and the
+  // voice switch from local state in the same frame, and the server is told in the
+  // background. Nothing on screen waits for the network. The chat request also carries the
+  // mode on screen (see ChatPanel), so the server can never answer in a different mode than
+  // the avatar shown, even if this background call is slow or fails.
+  const modeSeq = useRef(0);
+  function selectMode(id) {
+    if (id === "nonstop") updateSettings({ voiceMode: true });
     if (!conversation) {
+      if (id === "nonstop") return startNonstop();
       setPersona(id);
-      return;
+      return undefined;
     }
-    if (conversation.persona === id) return;
-    try {
-      const uc = await api.updateConversation(conversation.id, { persona: id });
-      setConversations((cs) => cs.map((x) => (x.id === uc.id ? uc : x)));
-      setConversation((cur) => (cur?.id === uc.id ? uc : cur));
-      setPersona(id);
-    } catch {
-      flashModeNote("Could not switch mode — check the connection and try again.");
-    }
+    if (conversation.persona === id) return undefined;
+    const target = conversation;
+    const mySeq = ++modeSeq.current;
+    const apply = (c) => {
+      setConversations((cs) => cs.map((x) => (x.id === c.id ? c : x)));
+      setConversation((cur) => (cur?.id === c.id ? c : cur));
+    };
+    apply({ ...target, persona: id }); // optimistic
+    setPersona(id);
+    return api
+      .updateConversation(target.id, { persona: id })
+      .then((uc) => {
+        // Only the LAST pick may touch the screen (quick clicks A -> B -> C must end on C).
+        if (modeSeq.current === mySeq) apply({ ...uc, persona: id });
+      })
+      .catch((e) => {
+        if (modeSeq.current !== mySeq) return;
+        if (e?.status === 404 || e?.status === 400) {
+          apply(target); // the session is gone / the mode is not valid: put the old mode back
+          setPersona(target.persona);
+          flashModeNote("Could not switch mode — please try again.");
+        }
+        // Any other failure (a network blip) keeps the new mode on screen: the next message
+        // carries it to the server anyway.
+      });
   }
   function renameConversation(c) {
     setDialog({
@@ -345,6 +365,7 @@ export default function App() {
                   key={id}
                   onClick={() => selectMode(id)}
                   aria-pressed={activePersona === id}
+                  title={MODE_HINT[id]}
                   className={
                     "rounded-md border px-2.5 py-1 font-hud text-[11px] uppercase tracking-wider transition " +
                     (activePersona === id

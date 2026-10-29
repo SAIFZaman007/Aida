@@ -45,9 +45,9 @@ function RiggedAvatar({ avatar, gltf, activity, look }) {
       thinking: a.thinking,
       amplitude: speechBus.amplitude,
       bands: [speechBus.low, speechBus.mid, speechBus.high],
+      synthetic: speechBus.synthetic, // browser voice: nothing to measure, the rig makes up a speech rhythm
       look: look.current,
     });
-    speechBus.amplitude *= 0.86; // browser-voice word pulses fade out; the cloud meter refreshes it each frame
   });
 
   return <primitive object={rig.holder} />;

@@ -6,19 +6,21 @@ import { CircuitBreaker, Limiter } from "../src/lib/resilience.js";
 
 // ---------------------------------------------------------------- fake browser
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const log = []; // what actually came out of the "speakers", in order
+let log = []; // what actually came out of the "speakers", in order (a fresh array per test: late timers of an earlier test must not leak in)
 
 class FakeUtterance {
   constructor(text) { this.text = text; }
 }
-function installBrowser({ voices = [], utteranceMs = 5 } = {}) {
+function installBrowser({ voices = [], utteranceMs = 5, neverStart = false } = {}) {
+  const log = globalThis.__log;
   let current = null;
   const synth = {
     getVoices: () => voices,
     addEventListener() {},
     speak(u) {
+      if (neverStart) { log.push({ kind: "browser-stuck", text: u.text }); return; }
       current = u;
-      log.push({ kind: "browser", text: u.text, lang: u.lang, voice: u.voice?.name });
+      log.push({ kind: "browser", text: u.text, lang: u.lang, voice: u.voice?.name, pitch: u.pitch });
       u.onstart?.();
       u._t = setTimeout(() => { current = null; u.onend?.(); }, utteranceMs);
     },
@@ -73,7 +75,7 @@ const voices = [
 ];
 
 /** PCM of `samples` 16-bit samples whose value is the sentence number (so playback order is observable). */
-const pcm = (n, samples = 480) => {
+const pcm = (n, samples = 4800) => {
   const a = new Int16Array(samples).fill(n);
   return new Uint8Array(a.buffer);
 };
@@ -96,7 +98,7 @@ function fakeApi({ delays = {}, fail = () => false, calls = [], samples = {}, ha
       return {
         sampleRate: 24000,
         chunks: (async function* () {
-          const total = samples[n] ?? 480;
+          const total = samples[n] ?? 4800; // 0.2 s: longer than the player's 60 ms lead-out
           yield pcm(n, Math.ceil(total / 2));
           if (midFail(n)) throw codedError("unavailable");
           await sleep(1);
@@ -107,19 +109,23 @@ function fakeApi({ delays = {}, fail = () => false, calls = [], samples = {}, ha
   };
 }
 
-async function build({ api = fakeApi(), cfg = settings(), v = voices, breaker, timeouts, av = avatar } = {}) {
-  log.length = 0;
+async function build({ api = fakeApi(), cfg = settings(), v = voices, breaker, timeouts, av = avatar, neverStart = false } = {}) {
+  log = [];
+  globalThis.__log = log;
   _resetVoiceCache();
-  installBrowser({ voices: v });
-  const tts = new TTS({ api, breaker: breaker || new CircuitBreaker(), limiter: new Limiter(3), timeouts });
-  tts.onSentenceStart = (i) => log.push({ kind: "reveal", i });
+  installBrowser({ voices: v, neverStart });
+  const tts = new TTS({ api, breaker: breaker || new CircuitBreaker(), limiter: new Limiter(3), timeouts, log: false });
+  tts.notices = [];
+  tts.onNotice = (n) => tts.notices.push(n);
+  const mine = log;
+  tts.onSentenceStart = (i) => mine.push({ kind: "reveal", i });
   await tts.configure(cfg, av);
   return tts;
 }
 const idle = async (tts, max = 3000) => {
   const t0 = Date.now();
   while (tts.busy && Date.now() - t0 < max) await sleep(5);
-  await sleep(15);
+  await sleep(160); // the last clip is still being heard for a moment after the queue empties
 };
 const say = (tts, index, text, code = false) => tts.speakSentence({ index, text, code });
 const seq = () => log.map((l) => (l.kind === "reveal" ? `r${l.i}` : l.kind === "cloud" ? `c${l.tag}` : "b"));
@@ -302,25 +308,66 @@ test("cancel() mid-playback of a browser sentence does not leave the queue stuck
 // ------------------------------------------------------------------------ voices / languages
 test("the avatar's gender is sent with every cloud request", async () => {
   const api = fakeApi();
-  const tts = await build({ api, av: { gender: "male", voiceHints: ["david"] } });
+  const male = { gender: "male", voiceHints: ["david"] };
+  const female = { gender: "female", voiceHints: [] };
+  const tts = await build({ api, av: male });
+  tts.beginReply(male);
   say(tts, 0, "Hello 1.");
   await idle(tts);
   assert.equal(api.calls[0].gender, "male");
-  await tts.configure(settings(), { gender: "female", voiceHints: [] });
-  say(tts, 1, "Hello 2.");
+  await tts.configure(settings(), female);
+  tts.beginReply(female);
+  say(tts, 0, "Hello 2.");
   await idle(tts);
   assert.equal(api.calls[1].gender, "female");
 });
 
-test("a mode (avatar) change in the middle of a reply never changes the voice of queued sentences", async () => {
+test("the voice is pinned for the WHOLE reply: a mode change in the middle cannot switch it", async () => {
   const api = fakeApi({ delays: { 1: 30, 2: 30, 3: 30 } });
-  const tts = await build({ api, av: { gender: "male", voiceHints: ["david"] } });
+  const male = { gender: "male", voiceHints: ["david"] };
+  const female = { gender: "female", voiceHints: ["zira"] };
+  const tts = await build({ api, av: male });
+  tts.beginReply(male);
   say(tts, 0, "Hello 1. ");
   say(tts, 1, "Hello 2. ");
-  await tts.configure(settings(), { gender: "female", voiceHints: [] }); // the person switches to Writer
+  await tts.configure(settings(), female); // the avatar on screen changes while the reply is queued
   say(tts, 2, "Hello 3.");
   await idle(tts);
-  assert.deepEqual(api.calls.map((c) => c.gender), ["male", "male", "female"]);
+  assert.deepEqual(api.calls.map((c) => c.gender), ["male", "male", "male"]);
+  // the next reply starts with the new avatar
+  tts.beginReply(female);
+  say(tts, 0, "Hello 4.");
+  await idle(tts);
+  assert.equal(api.calls[3].gender, "female");
+});
+
+test("the browser fallback of a reply also keeps that reply's voice after a mode change", async () => {
+  const male = { gender: "male", voiceHints: ["david"] };
+  const female = { gender: "female", voiceHints: ["zira"] };
+  const tts = await build({ cfg: settings({ ttsProvider: "webspeech" }), av: male });
+  tts.beginReply(male);
+  say(tts, 0, "I am fine. ");
+  await tts.configure(settings({ ttsProvider: "webspeech" }), female); // switched mid-reply
+  say(tts, 1, "Still fine.");
+  await idle(tts);
+  assert.deepEqual(log.filter((l) => l.kind === "browser").map((l) => l.voice), ["David", "David"]);
+});
+
+test("a browser voice whose gender is unknown gets a pitch nudge towards the avatar's gender", async () => {
+  const noHints = [{ name: "Generic", lang: "en-US", voiceURI: "g" }];
+  for (const [gender, expected] of [["female", 1.12], ["male", 0.88]]) {
+    const av = { gender, voiceHints: gender === "female" ? ["zira"] : ["david"] };
+    const tts = await build({ cfg: settings({ ttsProvider: "webspeech" }), v: noHints, av });
+    tts.beginReply(av);
+    say(tts, 0, "Hello there.");
+    await idle(tts);
+    assert.equal(log.find((l) => l.kind === "browser").pitch, expected);
+  }
+  // a voice that matches the hints is left alone
+  const tts = await build({ cfg: settings({ ttsProvider: "webspeech" }), av: { gender: "female", voiceHints: ["zira"] } });
+  say(tts, 0, "Hello there.");
+  await idle(tts);
+  assert.equal(log.find((l) => l.kind === "browser").pitch, 1);
 });
 
 test("browser fallback voice follows the avatar's voice hints", async () => {
@@ -342,13 +389,109 @@ test("Bengali and English sentences get a voice and lang of their own language",
   assert.equal(b[1].voice, "Zira");
 });
 
-test("Bengali with no Bengali voice installed still sets lang (never uses an English voice)", async () => {
-  const tts = await build({ cfg: settings({ ttsProvider: "webspeech" }), v: voices.slice(0, 2) });
+test("Bengali with no Bengali voice anywhere: no waiting, the text flows, the person is told why", async () => {
+  const api = fakeApi({ fail: () => true });
+  const tts = await build({ api, v: voices.slice(0, 2) }); // cloud voice failing, no bn voice on the device
+  const t0 = Date.now();
+  say(tts, 0, "আমি ভালো আছি। ");
+  say(tts, 1, "আপনি কেমন আছেন? ");
+  say(tts, 2, "ধন্যবাদ।");
+  await idle(tts);
+  assert.ok(Date.now() - t0 < 1500, "must not sit through speech that will never be heard");
+  assert.equal(log.filter((l) => l.kind === "browser").length, 0, "never an English voice reading Bengali");
+  assert.deepEqual(seq().filter((x) => x.startsWith("r")), ["r0", "r1", "r2"], "all text revealed");
+  assert.equal(tts.notices.filter((n) => n.kind === "novoice").length, 1, "told once per reply, not per sentence");
+  assert.match(tts.notices.find((n) => n.kind === "novoice").text, /বাংলা/);
+});
+
+test("Bengali with a failing cloud voice but a device voice: the device voice speaks it, with a notice", async () => {
+  const tts = await build({ api: fakeApi({ fail: () => true }) });
   say(tts, 0, "আমি ভালো আছি।");
-  await sleep(40);
+  await idle(tts);
   const b = log.find((l) => l.kind === "browser");
-  assert.equal(b.voice, undefined);
-  assert.equal(b.lang, "bn-BD");
+  assert.equal(b.voice, "Nabanita");
+  assert.equal(tts.notices.filter((n) => n.kind === "fallback").length, 1);
+});
+
+test("the circuit breaker never silences Bengali on a device without a Bengali voice: the cloud is still tried", async () => {
+  const api = fakeApi();
+  const breaker = new CircuitBreaker({ failLimit: 1, openMs: 60_000 });
+  breaker.failure(new Error("x")); // open
+  assert.equal(breaker.available(), false);
+  const tts = await build({ api, breaker, v: voices.slice(0, 2) });
+  say(tts, 0, "আমি ভালো আছি 1।");
+  say(tts, 1, "I am fine 2.");
+  await idle(tts);
+  assert.ok(api.calls.length >= 1, "Bengali goes to the cloud even though the breaker is open");
+  assert.equal(api.calls[0].text.includes("আমি"), true);
+  assert.equal(log.filter((l) => l.kind === "cloud").length >= 1, true, "and it was heard");
+  assert.equal(log.filter((l) => l.kind === "browser" && l.lang === "bn-BD").length, 0);
+});
+
+test("a slow voice is reported once, and the text is not held back by it", async () => {
+  const api = fakeApi({ delays: { 2: 600 } });
+  const tts = await build({ api, timeouts: { slow: 40, grace: 30, first: 3000 } });
+  say(tts, 0, "One 1. ");
+  say(tts, 1, "Two 2. ");
+  await sleep(400);
+  // sentence 2's voice is still on its way, but its text is already shown (grace period)
+  assert.ok(seq().includes("r1"), "text revealed after the grace period even though the audio is late");
+  assert.ok(!seq().includes("c2"));
+  await idle(tts, 4000);
+  assert.equal(tts.notices.filter((n) => n.kind === "slow").length, 1);
+});
+
+test("the text of a sentence appears when its voice starts, not before (inside the grace period)", async () => {
+  const api = fakeApi({ delays: { 2: 80 } });
+  const tts = await build({ api, timeouts: { grace: 5000 } });
+  say(tts, 0, "One 1. ");
+  say(tts, 1, "Two 2. ");
+  await idle(tts);
+  const order = seq();
+  assert.ok(order.indexOf("c2") < order.indexOf("r1") + 3);          // r1 and c2 are adjacent: shown with the sound
+  assert.ok(order.indexOf("r1") > order.indexOf("c1"), "sentence 2 is not shown while sentence 1 is being read");
+});
+
+test("a browser voice that never starts does not hold up the reply", async () => {
+  const tts = await build({ cfg: settings({ ttsProvider: "webspeech" }), neverStart: true, timeouts: { browserStart: 60 } });
+  const t0 = Date.now();
+  say(tts, 0, "Stuck one.");
+  say(tts, 1, "Stuck two.");
+  await idle(tts);
+  assert.ok(Date.now() - t0 < 1500);
+  assert.equal(tts.busy, false);
+  assert.deepEqual(seq().filter((x) => x.startsWith("r")), ["r0", "r1"]);
+});
+
+test("beginReply() clears the previous reply's highlighting and sentence offsets", async () => {
+  const tts = await build();
+  tts.beginReply(avatar);
+  say(tts, 0, "First 1.");
+  await idle(tts);
+  tts.beginReply(avatar);
+  assert.equal(tts.highlighter.sentences.length, 0);
+  say(tts, 0, "Second 2.");
+  assert.equal(tts.highlighter.sentences[0].charStart, 0);
+  await idle(tts);
+});
+
+test("every sentence leaves a timing record for support", async () => {
+  const tts = await build({ api: fakeApi({ fail: (n) => n === 2 }) });
+  say(tts, 0, "One 1. "); say(tts, 1, "Two 2.");
+  await idle(tts);
+  assert.equal(tts.diagnostics.length, 2);
+  assert.equal(tts.diagnostics[0].via, "cloud");
+  assert.ok(Number.isFinite(tts.diagnostics[0].firstAudioMs));
+  assert.equal(tts.diagnostics[1].via, "browser");
+});
+
+test("the meter keeps running between sentences so the mouth does not snap shut", async () => {
+  const tts = await build({ api: fakeApi({ delays: { 1: 1, 2: 1 } }) });
+  say(tts, 0, "One 1. "); say(tts, 1, "Two 2.");
+  await sleep(100);
+  assert.ok(tts._meter, "meter active while the reply is being read");
+  await idle(tts);
+  assert.equal(tts._meter, 0, "and stopped when the reply has been read");
 });
 
 test("browser speech is normalized per language (no English injected into Bengali)", async () => {

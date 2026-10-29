@@ -5,15 +5,17 @@ import { PcmClip, PcmPlayer } from "../src/lib/pcmPlayer.js";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-function fakeCtx() {
+function fakeCtx({ delay = false } = {}) {
   const sched = [];
+  const graph = []; // connections made: [from, to]
   const ctx = {
     state: "running",
     sampleRate: 24000,
     destination: {},
     get currentTime() { return performance.now() / 1000; },
     resume: () => Promise.resolve(),
-    createAnalyser: () => ({ fftSize: 512, frequencyBinCount: 256, connect() {}, getByteTimeDomainData: (a) => a.fill(128), getByteFrequencyData: (a) => a.fill(0) }),
+    createAnalyser: () => ({ name: "analyser", fftSize: 512, frequencyBinCount: 256, connect(to) { graph.push(["analyser", to?.name || "destination"]); }, getByteTimeDomainData: (a) => a.fill(128), getByteFrequencyData: (a) => a.fill(0) }),
+    ...(delay ? { createDelay: () => ({ name: "delay", delayTime: { value: 0 }, connect(to) { graph.push(["delay", to === ctx.destination ? "destination" : to?.name]); } }) } : {}),
     createBuffer: (ch, n, rate) => {
       const data = new Float32Array(n);
       return { length: n, duration: n / rate, rate, data, copyToChannel(s) { data.set(s); }, getChannelData: () => data };
@@ -28,7 +30,7 @@ function fakeCtx() {
       stop() { clearTimeout(this._t); this.onended?.(); },
     }),
   };
-  return { ctx, sched };
+  return { ctx, sched, graph };
 }
 const samples = (v, n) => new Uint8Array(new Int16Array(n).fill(v).buffer);
 
@@ -43,7 +45,10 @@ test("plays a complete clip as one buffer and resolves after it was heard", asyn
   assert.deepEqual(started, { known: true });
   assert.equal(sched.length, 1);                       // chunks that were ready are merged
   assert.equal(sched[0].len, 4800);
-  assert.ok(performance.now() - t0 >= 190, "returns only after the 0.2 s clip played");
+  const took = performance.now() - t0;
+  // returns ~60 ms before the last sample is heard (the lead-out that makes the next
+  // sentence join seamlessly), never earlier and never later than the end
+  assert.ok(took >= 120 && took < 215, `returned after ${took | 0} ms for a 0.2 s clip`);
 });
 
 test("streams: starts after the pre-buffer, then schedules later chunks back-to-back", async () => {
@@ -107,4 +112,62 @@ test("level() and bands() are safe before any audio", () => {
   const p = new PcmPlayer({ getContext: () => fakeCtx().ctx });
   assert.equal(p.level(), 0);
   assert.deepEqual(p.bands(), [0, 0, 0]);
+});
+
+test("the next clip is chained onto the end of the previous one (gapless)", async () => {
+  const { ctx, sched } = fakeCtx();
+  const p = new PcmPlayer({ getContext: () => ctx });
+  const a = new PcmClip(24000); a.push(samples(1000, 4800)); a.finish();   // 0.2 s
+  const b = new PcmClip(24000); b.push(samples(2000, 4800)); b.finish();
+  await p.play(a, {});
+  const secondStartedAfter = performance.now();
+  await p.play(b, {});
+  assert.equal(sched.length, 2);
+  const gap = sched[1].at - (sched[0].at + sched[0].dur);
+  assert.ok(Math.abs(gap) < 0.002, `sample-exact join, got ${(gap * 1000).toFixed(2)} ms`);
+  assert.ok(secondStartedAfter > 0);
+});
+
+test("after a pause the next clip starts a moment from now, not in the past", async () => {
+  const { ctx, sched } = fakeCtx();
+  const p = new PcmPlayer({ getContext: () => ctx });
+  const a = new PcmClip(24000); a.push(samples(1000, 2400)); a.finish();
+  await p.play(a, {});
+  await sleep(250);                                            // everything has been heard
+  const now = ctx.currentTime;
+  const b = new PcmClip(24000); b.push(samples(2000, 2400)); b.finish();
+  await p.play(b, {});
+  assert.ok(sched[1].at >= now, "never scheduled in the past");
+  assert.ok(sched[1].at - now < 0.1);
+});
+
+test("stop() forgets the playhead so the next clip does not wait for audio that was cut", async () => {
+  const { ctx, sched } = fakeCtx();
+  const p = new PcmPlayer({ getContext: () => ctx });
+  const a = new PcmClip(24000); a.push(samples(1000, 48000)); a.finish(); // 2 s
+  const first = p.play(a, {});
+  await sleep(20);
+  p.stop();
+  await first;
+  const b = new PcmClip(24000); b.push(samples(2000, 2400)); b.finish();
+  const now = ctx.currentTime;
+  await p.play(b, {});
+  assert.ok(sched[1].at - now < 0.1, "starts at once, not after the 2 s that were cut");
+});
+
+test("lip-sync leads the sound: the analyser hears the signal before the speakers do", async () => {
+  const { ctx, graph } = fakeCtx({ delay: true });
+  const p = new PcmPlayer({ getContext: () => ctx });
+  const a = new PcmClip(24000); a.push(samples(1000, 2400)); a.finish();
+  await p.play(a, {});
+  assert.deepEqual(graph, [["analyser", "delay"], ["delay", "destination"]]);
+  assert.ok(p.delay.delayTime.value > 0.03 && p.delay.delayTime.value < 0.1);
+});
+
+test("without a delay node (old browsers) audio still reaches the speakers", async () => {
+  const { ctx, graph } = fakeCtx({ delay: false });
+  const p = new PcmPlayer({ getContext: () => ctx });
+  const a = new PcmClip(24000); a.push(samples(1000, 2400)); a.finish();
+  await p.play(a, {});
+  assert.deepEqual(graph, [["analyser", "destination"]]);
 });

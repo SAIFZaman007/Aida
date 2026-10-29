@@ -58,6 +58,8 @@ export default function ChatPanel({ conversation, avatar, onActivity }) {
   convRef.current = conversation;
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
+  const avatarRef = useRef(avatar);
+  avatarRef.current = avatar;
 
   // ---- voice engine wiring ---------------------------------------------------------
   useEffect(() => {
@@ -72,11 +74,15 @@ export default function ChatPanel({ conversation, avatar, onActivity }) {
     tts.onBusyChange = (isBusy) => {
       if (!isBusy) maybeFinish();
     };
+    // Why a sentence is silent or slow (voice quota, no Bengali voice on this device…):
+    // shown, never swallowed.
+    tts.onNotice = ({ kind, text }) => showNote(kind === "novoice" ? "error" : "info", text);
     tts.highlighter.onUpdate = (range) => setHighlightRange(range);
     return () => {
       tts.onSpeakingChange = null;
       tts.onSentenceStart = null;
       tts.onBusyChange = null;
+      tts.onNotice = null;
       tts.highlighter.onUpdate = null;
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -85,6 +91,17 @@ export default function ChatPanel({ conversation, avatar, onActivity }) {
   useEffect(() => {
     tts.configure(settings, avatar);
   }, [settings, avatar]);
+
+  // A MODE CHANGE ends the reply in progress. The avatar (and so the voice) is chosen per
+  // reply; letting a reply written for one avatar keep talking through another would put
+  // one voice on another person's face. What was already shown stays in the history.
+  const avatarId = avatar?.id;
+  const lastAvatarId = useRef(avatarId);
+  useEffect(() => {
+    if (lastAvatarId.current === avatarId) return;
+    lastAvatarId.current = avatarId;
+    if (busyRef.current || liveRef.current || tts.busy) stopRef.current?.();
+  }, [avatarId]);
 
   // What the avatar should be doing right now.
   const capturing = voiceState === "capturing";
@@ -242,7 +259,7 @@ export default function ChatPanel({ conversation, avatar, onActivity }) {
     setCaption("");
     setBusy(true);
     tts.cancel(); // silence the previous reply so its audio can't mix with this one
-    tts.resetStream();
+    tts.beginReply(avatarRef.current); // pin THIS avatar's voice for the whole reply
     setHighlightRange(null);
     const ctrl = new AbortController();
     abortRef.current = ctrl;
@@ -255,7 +272,7 @@ export default function ChatPanel({ conversation, avatar, onActivity }) {
 
     try {
       const full = await api.streamChat(
-        { conversationId: conv.id, content },
+        { conversationId: conv.id, content, persona: conv.persona },
         (_, f) => {
           if (reqRef.current !== myReq) return;
           live.tokens(f);

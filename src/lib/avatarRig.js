@@ -28,6 +28,7 @@
 */
 import * as THREE from "three";
 import { FaceRig } from "./faceRig.js";
+import { LipSync } from "./lipSync.js";
 import { resolveStyle, kindInfo, pickGesture, gestureDelay, gestureVariation, chooseArms } from "./bodyLanguage.js";
 
 const V3 = THREE.Vector3;
@@ -329,6 +330,8 @@ export class AvatarRig {
 
     // ---- animation state
     this.t = 0;
+    this.lip = new LipSync(); // loudness + spectrum → a natural mouth (see lipSync.js)
+    this.mouth = { open: 0, wide: 0, round: 0, level: 0 };
     this.s = {
       head: new V3(), // smoothed yaw/pitch/roll
       eyes: { x: 0, y: 0, tx: 0, ty: 0, next: 0.6 },
@@ -517,7 +520,8 @@ export class AvatarRig {
   // ---- per frame ------------------------------------------------------------------
   /**
    * @param dt      seconds since the last frame
-   * @param input   { speaking, listening, thinking, amplitude, bands:[low,mid,high], look:{x,y} }
+   * @param input   { speaking, listening, thinking, amplitude, bands:[low,mid,high], synthetic, look:{x,y} }
+   *                `synthetic` = the voice cannot be measured (browser voice): a speech rhythm is made up
    */
   update(dt, input = {}) {
     dt = Math.min(dt, 0.1);
@@ -539,6 +543,13 @@ export class AvatarRig {
     const amp = clamp(input.amplitude ?? 0, 0, 1);
     s.ampPrev = s.amp;
     s.amp = damp(s.amp, amp, amp > s.amp ? 28 : 14, dt);
+    // the mouth: conditioned loudness → jaw, spectrum shares → wide / round (see lipSync.js)
+    this.mouth = this.lip.update(dt, {
+      speaking,
+      amplitude: input.amplitude,
+      bands: input.bands,
+      synthetic: !!input.synthetic,
+    });
     const rise = s.amp - s.ampPrev;
     s.emph = rise > 0.07 && speaking;
     if (s.emph) s.nod = Math.min(1, s.nod + 0.7); // emphasis → small nod
@@ -634,8 +645,7 @@ export class AvatarRig {
   _face(dt, t, speaking, listening, input) {
     const m = this.morphs;
     const s = this.s;
-    const bands = input.bands || [0, 0, 0];
-    const open = clamp(s.amp * 1.7, 0, 1) * (speaking ? 1 : 0);
+    const { open, wide, round } = this.mouth;
 
     // blink
     const bl = s.blink;
@@ -652,10 +662,7 @@ export class AvatarRig {
       if (p >= 1) bl.t = -1;
     }
 
-    // mouth: open from loudness; shape from the spectrum (low = round "aa/oo", high = wide "ee")
-    const [low, , high] = bands;
-    const wide = clamp((high * 1.4 - low * 0.6) * 1.5, 0, 1);
-    const round = clamp((low * 1.2 - high) * 1.2, 0, 1);
+    // mouth: see lipSync.js — `open` is the jaw, `wide` ("ee") and `round` ("oo") the shape
 
     // expression: this character's own smile; brows lift on emphasis and when a gesture starts
     const F = this.style.face;

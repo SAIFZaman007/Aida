@@ -215,6 +215,38 @@ test("the server's 'script' reason is honoured even for an empty text", async ()
   tr.dispose();
 });
 
+test("a stock 'no speech' phrase (the screenshot's \"Didn't catch that\") never becomes a chat message", async () => {
+  const { tr, live, ev } = make();
+  speak(tr, { voiced: 80 });
+  live.h.onInterim(1, "Didn't catch that.");
+  live.h.onFinal(1, "Didn't catch that. Please say it again.", "unknown");
+  await sleep(10);
+  assert.deepEqual(ev.interim.filter(Boolean), [], "no caption either");
+  assert.deepEqual(ev.text, []);
+  assert.equal(ev.none, 1);
+  assert.deepEqual(ev.http, [], "and no second opinion on the same noise");
+  tr.dispose();
+});
+
+test("the server's 'noise' reason is honoured even for an empty text", async () => {
+  const { tr, live, ev } = make();
+  speak(tr, { voiced: 80 });
+  live.h.onFinal(1, "", "unknown", "noise");
+  await sleep(10);
+  assert.equal(ev.none, 1);
+  assert.deepEqual(ev.http, []);
+  tr.dispose();
+});
+
+test("a person's own 'I didn't catch that, can you say it again?' is a real message", async () => {
+  const { tr, live, ev } = make();
+  speak(tr);
+  live.h.onFinal(1, "I didn't catch that, can you say it again?", "en");
+  await sleep(10);
+  assert.deepEqual(ev.text, ["I didn't catch that, can you say it again?"]);
+  tr.dispose();
+});
+
 test("a plain empty result still gets its second opinion; Bengali/English pass through", async () => {
   const a = make();
   speak(a.tr, { voiced: 80 });

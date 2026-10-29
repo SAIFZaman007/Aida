@@ -13,7 +13,12 @@
 
 const PREBUFFER_SECONDS = 0.3; // enough head-start to ride out network jitter
 const START_LEAD_SECONDS = 0.04; // scheduling margin for the very first chunk
-const END_GUARD_MS = 1500; // a suspended context never fires `ended`; don't hang on it
+// play() returns this long BEFORE the last sample is heard, so the engine can hand over
+// the next sentence while the tail is still playing. The next clip is chained to the end
+// of the previous one on the audio clock (see `playhead`), so the join is sample-exact
+// whatever the timers do.
+const LEAD_OUT_SECONDS = 0.06;
+const OUTPUT_DELAY_SECONDS = 0.06; // the mouth LEADS the sound by this much (see _ctx)
 
 /** One sentence's audio, filled by the network while the player drains it. */
 export class PcmClip {
@@ -119,7 +124,18 @@ export class PcmPlayer {
     if (!this.analyser && ctx.createAnalyser) {
       this.analyser = ctx.createAnalyser();
       this.analyser.fftSize = 512;
-      this.analyser.connect(ctx.destination);
+      // Real lip-sync leads the sound: people see a mouth move a moment BEFORE they hear
+      // the syllable. The analyser listens to the un-delayed signal while the speakers get
+      // it OUTPUT_DELAY_SECONDS later, so the face anticipates the voice instead of lagging.
+      if (ctx.createDelay) {
+        const delay = ctx.createDelay(0.5);
+        delay.delayTime.value = OUTPUT_DELAY_SECONDS;
+        this.analyser.connect(delay);
+        delay.connect(ctx.destination);
+        this.delay = delay;
+      } else {
+        this.analyser.connect(ctx.destination);
+      }
     }
     return ctx;
   }
@@ -176,11 +192,6 @@ export class PcmPlayer {
     let index = 0;
     let started = false;
     let lastSource = null;
-    let ended = null;
-
-    const endedPromise = new Promise((resolve) => {
-      ended = resolve;
-    });
 
     while (alive()) {
       if (index < clip.chunks.length) {
@@ -205,15 +216,14 @@ export class PcmPlayer {
           src.buffer = buffer;
           src.connect(this.analyser || ctx.destination);
           const now = ctx.currentTime;
-          if (!started) this.playhead = now + START_LEAD_SECONDS;
+          // The first chunk of a clip starts where the previous clip ends when that is still
+          // ahead (gapless), otherwise a moment from now.
+          if (!started) this.playhead = Math.max(this.playhead, now + START_LEAD_SECONDS);
           const at = Math.max(this.playhead, now + 0.005);
           this.playhead = at + buffer.duration;
           this.sources.add(src);
           lastSource = src;
-          src.onended = () => {
-            this.sources.delete(src);
-            if (src === lastSource && clip.done && index >= clip.chunks.length) ended();
-          };
+          src.onended = () => this.sources.delete(src);
           src.start(at);
           if (!started) {
             started = true;
@@ -231,9 +241,9 @@ export class PcmPlayer {
       if (clip.error) throw clip.error;
       return;
     }
-    // Everything is scheduled; wait for the tail to be heard.
-    if (lastSource && this.sources.has(lastSource)) {
-      const remaining = Math.max(0, this.playhead - ctx.currentTime) * 1000 + END_GUARD_MS;
+    // Everything is scheduled; wait until the tail is nearly heard, then hand over.
+    const remaining = Math.max(0, this.playhead - ctx.currentTime - LEAD_OUT_SECONDS) * 1000;
+    if (remaining > 0) {
       let guard;
       let release;
       const stopped = new Promise((resolve) => {
@@ -241,7 +251,6 @@ export class PcmPlayer {
         this._stopWaiters.add(resolve);
       });
       await Promise.race([
-        endedPromise,
         stopped,
         new Promise((resolve) => {
           guard = setTimeout(resolve, remaining);

@@ -14,7 +14,7 @@
   gets one second opinion over HTTP before we say "didn't catch that".
 */
 
-import { isForeignScript } from "./text.js";
+import { isForeignScript, isNoisePhrase } from "./text.js";
 
 const FINAL_TIMEOUT_MS = 7000; // server settles in < 1.5 s; this only catches a stalled socket
 const SECOND_OPINION_FRAMES = 30; // 0.6 s of voiced audio
@@ -109,7 +109,7 @@ export class Transcriber {
   _interim(id, text) {
     if (this.disposed) return;
     const rec = this.records.get(id);
-    if (rec && text && !isForeignScript(text)) this.onInterim(text); // no captions in a language we do not speak
+    if (rec && text && !isForeignScript(text) && !isNoisePhrase(text)) this.onInterim(text); // no captions in a language we do not speak
   }
 
   _final(id, raw, reason = "") {
@@ -118,9 +118,10 @@ export class Transcriber {
     this.records.delete(id);
     clearTimeout(rec.timer);
     let text = (raw || "").trim();
-    // Noise heard as another language (Chinese, Russian…): that is "no speech", and a second
+    // Noise heard as another language (Chinese, Russian…) or as a stock "no speech" phrase: that is
+    // "no speech", and a second
     // opinion would only spend quota on the same noise.
-    const noise = reason === "script" || isForeignScript(text);
+    const noise = reason === "script" || reason === "noise" || isForeignScript(text) || isNoisePhrase(text);
     if (noise) text = "";
     if (!text && !noise && rec.voiced >= SECOND_OPINION_FRAMES && rec.frames) return this._viaHttp(rec);
     this._inOrder(() => this._deliver(rec, text));

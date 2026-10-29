@@ -6,6 +6,7 @@ import {
   detectLanguage, dominantLanguage, normalizeForSpeech, stripMarkdown, hasSpeakable,
   rawWordSpans, mapSpokenIndexToRaw, mapMarksToRaw,
   isForeignScript,
+  isNoisePhrase,
   foreignScriptShare,
 } from "../src/lib/text.js";
 import { CircuitBreaker, Limiter } from "../src/lib/resilience.js";
@@ -18,6 +19,9 @@ for (const v of vectors.normalize) {
 }
 for (const v of vectors.foreign_script) {
   test(`foreign_script: ${JSON.stringify(v.in)}`, () => assert.equal(isForeignScript(v.in), v.out));
+}
+for (const v of vectors.noise_phrase) {
+  test(`noise_phrase: ${JSON.stringify(v.in)}`, () => assert.equal(isNoisePhrase(v.in), v.out));
 }
 test("foreignScriptShare: shares, accented Latin, allow-list", () => {
   assert.equal(foreignScriptShare(""), 0);

@@ -252,6 +252,105 @@ export function setPivotScale(pivot, sx, sy, sz = 1) {
 }
 
 /**
+ * Static stand-ins for raycasting against the face meshes — above all the SKINNED ones.
+ *
+ * three.js re-skins every triangle of a skinned mesh for every ray it casts (four bone
+ * matrices per vertex), and tests every triangle of the mesh. The face rig fires ~180 rays
+ * (mouth, eyelids, skin colour), which froze the page for 0.4–2.9 s every time a mode's
+ * avatar was built — the "stuck while switching modes" problem. Here:
+ *   • each vertex is skinned ONCE, in the pose the rig is built in;
+ *   • every ray runs along -z inside the face column, so only triangles that overlap
+ *     `region` ({ minX, maxX, minY, maxY }, stage metres) in x/y can matter (and, for a
+ *     one-sided material, only those facing the rays — what three.js itself would keep);
+ *   • the survivors are split over a small grid of sub-meshes with tight bounding boxes,
+ *     so a ray only scans the few cells it crosses.
+ * The stand-ins share the original's material and UVs, so the hits (point, uv, material)
+ * are the ones a direct raycast gives — found ~50× faster. Instanced meshes and meshes with
+ * a material array are returned unchanged.
+ *
+ * Returns the flat list of meshes to raycast (several per input mesh).
+ */
+export const BAKE_GRID = 8;
+
+export function bakedRayTargets(meshes, region) {
+  return meshes.flatMap((m) => bakeOne(m, region));
+}
+
+function bakeOne(mesh, region) {
+  if (!mesh.isMesh || mesh.isInstancedMesh || Array.isArray(mesh.material)) return [mesh];
+  const geo = mesh.geometry;
+  const pos = geo.attributes.position;
+  if (!pos) return [mesh];
+  if (mesh.isSkinnedMesh && (!mesh.skeleton || !geo.attributes.skinIndex)) return [mesh];
+  mesh.updateWorldMatrix(true, false);
+  const world = mesh.matrixWorld;
+  const n = pos.count;
+  const out = new Float32Array(n * 3);
+  const v = new V3();
+  for (let i = 0; i < n; i++) {
+    mesh.getVertexPosition(i, v).applyMatrix4(world); // skinned (and morphed) position, in stage metres
+    out[i * 3] = v.x;
+    out[i * 3 + 1] = v.y;
+    out[i * 3 + 2] = v.z;
+  }
+  const position = new THREE.BufferAttribute(out, 3);
+  const side = mesh.material.side;
+  const G = BAKE_GRID;
+  const cw = (region.maxX - region.minX) / G;
+  const ch = (region.maxY - region.minY) / G;
+  const cell = (c, lo, size) => Math.min(G - 1, Math.max(0, Math.floor((c - lo) / size)));
+  const cells = new Map(); // cell id -> { idx: [], lo: [x,y,z], hi: [x,y,z] }
+  const src = geo.index;
+  const tri = src ? src.count / 3 : n / 3;
+  for (let t = 0; t < tri; t++) {
+    const a = src ? src.getX(t * 3) : t * 3;
+    const b = src ? src.getX(t * 3 + 1) : t * 3 + 1;
+    const c = src ? src.getX(t * 3 + 2) : t * 3 + 2;
+    const ax = out[a * 3], bx = out[b * 3], cx = out[c * 3];
+    const ay = out[a * 3 + 1], by = out[b * 3 + 1], cy = out[c * 3 + 1];
+    const minX = Math.min(ax, bx, cx), maxX = Math.max(ax, bx, cx);
+    const minY = Math.min(ay, by, cy), maxY = Math.max(ay, by, cy);
+    if (minX > region.maxX || maxX < region.minX || minY > region.maxY || maxY < region.minY) continue;
+    // three.js ignores triangles turned away from the ray for a one-sided material; so do we
+    if (side !== THREE.DoubleSide) {
+      const nz = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax); // z of the face normal; the rays travel along -z
+      if (side === THREE.FrontSide ? nz <= 0 : nz >= 0) continue;
+    }
+    const az = out[a * 3 + 2], bz = out[b * 3 + 2], cz = out[c * 3 + 2];
+    const minZ = Math.min(az, bz, cz), maxZ = Math.max(az, bz, cz);
+    const x0 = cell(minX, region.minX, cw), x1 = cell(maxX, region.minX, cw);
+    const y0 = cell(minY, region.minY, ch), y1 = cell(maxY, region.minY, ch);
+    for (let gy = y0; gy <= y1; gy++) {
+      for (let gx = x0; gx <= x1; gx++) {
+        const id = gy * G + gx;
+        let k = cells.get(id);
+        if (!k) cells.set(id, (k = { idx: [], lo: [Infinity, Infinity, Infinity], hi: [-Infinity, -Infinity, -Infinity] }));
+        k.idx.push(a, b, c);
+        k.lo[0] = Math.min(k.lo[0], minX); k.hi[0] = Math.max(k.hi[0], maxX);
+        k.lo[1] = Math.min(k.lo[1], minY); k.hi[1] = Math.max(k.hi[1], maxY);
+        k.lo[2] = Math.min(k.lo[2], minZ); k.hi[2] = Math.max(k.hi[2], maxZ);
+      }
+    }
+  }
+  const big = n > 65535;
+  const parts = [];
+  for (const k of cells.values()) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", position); // shared by every cell
+    if (geo.attributes.uv) g.setAttribute("uv", geo.attributes.uv); // shared, never modified
+    g.setIndex(new THREE.BufferAttribute(big ? new Uint32Array(k.idx) : new Uint16Array(k.idx), 1));
+    const centre = new V3((k.lo[0] + k.hi[0]) / 2, (k.lo[1] + k.hi[1]) / 2, (k.lo[2] + k.hi[2]) / 2);
+    g.boundingSphere = new THREE.Sphere(centre, centre.distanceTo(new V3(k.hi[0], k.hi[1], k.hi[2])) + 1e-6);
+    // a cell is a thin column along the rays' axis: its sphere is huge, its box is what rejects rays
+    g.boundingBox = new THREE.Box3(new V3(...k.lo), new V3(...k.hi));
+    const part = new THREE.Mesh(g, mesh.material); // same material: side culling and colour map as the original
+    part.userData.source = mesh;
+    parts.push(part);
+  }
+  return parts;
+}
+
+/**
  * A grid of `nx` x `ny` vertices spanning x in [-halfW, halfW] and y in [0, -height]
  * below the pivot's origin, each vertex pushed onto the skin (raycast from the front)
  * plus `lift`. Coordinates are relative to `origin` (stage metres).
@@ -452,11 +551,28 @@ export class FaceRig {
     });
     if (!skin.length) throw new Error("no skin mesh near the mouth");
 
+    // Every ray below runs along -z inside the face column; skinned meshes are skinned ONCE
+    // into static stand-ins covering just that column (see bakedRayTargets).
+    const { eyes: le, mouth: lmo } = lm;
+    const margin = 0.03;
+    const halfX = Math.max(le.x + le.w, lmo.half) + margin;
+    const region = {
+      minX: ref.x - halfX,
+      maxX: ref.x + halfX,
+      maxY: ref.y + Math.max(le.y + 2 * le.h + 0.016, lmo.y) + margin,
+      minY: ref.y + Math.min(lmo.y - lm.jaw, le.y - 0.03 - le.h) - margin,
+    };
+    const baked = new Map();
+    for (const m of new Set([...skin, ...raySkin])) baked.set(m, bakedRayTargets([m], region));
+    const rayOf = (list) => list.flatMap((m) => baked.get(m));
+    const skinRay = rayOf(skin);
+    const raySkinRay = rayOf(raySkin);
+
     // depth of the lips / eyes: ray from the front
     const rc = new THREE.Raycaster();
     const surf = (x, y) => {
       rc.set(new V3(x, y, ref.z + 1), new V3(0, 0, -1));
-      return rc.intersectObjects(skin, false)[0] || null;
+      return rc.intersectObjects(skinRay, false)[0] || null;
     };
     const mHit = surf(ref.x, mouthW.y);
     const mouthZ = mHit ? mHit.point.z : ref.z + 0.09;
@@ -482,7 +598,7 @@ export class FaceRig {
     // ---- mouth interior (only where the file has no mouth morph)
     if (!nativeMouth && this.skinMeshes.length) {
       const origin = new V3(ref.x, ref.y + lm.mouth.y, mouthZ);
-      const geo = conformalPatch({ origin, halfW: lm.mouth.half, height: lm.jaw, nx: 12, ny: 5, rayTargets: skin, fallbackZ: mouthZ, lift: 0.0011 });
+      const geo = conformalPatch({ origin, halfW: lm.mouth.half, height: lm.jaw, nx: 12, ny: 5, rayTargets: skinRay, fallbackZ: mouthZ, lift: 0.0011 });
       const tex = makeMouthTexture();
       const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
       const mesh = new THREE.Mesh(geo, mat);
@@ -501,7 +617,7 @@ export class FaceRig {
       for (const side of [-1, 1]) {
         const cx = ref.x + side * ex;
         const cy = ref.y + ey;
-        const rcTargets = raySkin.length ? raySkin : skin;
+        const rcTargets = raySkin.length ? raySkinRay : skinRay; // same choice as for the raw meshes
         rc.set(new V3(cx, cy, ref.z + 1), new V3(0, 0, -1));
         const hit = rc.intersectObjects(rcTargets, false)[0];
         const eyeZ = hit ? hit.point.z : mouthZ - 0.02;
@@ -510,7 +626,7 @@ export class FaceRig {
         const samples = [];
         for (const [dx, dy] of [[0, h + 0.012], [side * (w + 0.008), 0], [0, -0.03], [-side * 0.01, h + 0.016]]) {
           rc.set(new V3(cx + dx, cy + dy, ref.z + 1), new V3(0, 0, -1));
-          const sh = rc.intersectObjects(skin, false)[0];
+          const sh = rc.intersectObjects(skinRay, false)[0];
           if (sh && !cheekMaterial) cheekMaterial = sh.object.material;
           const c = sampleSkin(sh);
           if (c) samples.push(c);
