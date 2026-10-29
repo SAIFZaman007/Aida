@@ -5,6 +5,8 @@ import { readFileSync } from "node:fs";
 import {
   detectLanguage, dominantLanguage, normalizeForSpeech, stripMarkdown, hasSpeakable,
   rawWordSpans, mapSpokenIndexToRaw, mapMarksToRaw,
+  isForeignScript,
+  foreignScriptShare,
 } from "../src/lib/text.js";
 import { CircuitBreaker, Limiter } from "../src/lib/resilience.js";
 
@@ -14,6 +16,19 @@ const vectors = JSON.parse(readFileSync(new URL("./speech_vectors.json", import.
 for (const v of vectors.normalize) {
   test(`normalize: ${v.id}`, () => assert.equal(normalizeForSpeech(v.in), v.out));
 }
+for (const v of vectors.foreign_script) {
+  test(`foreign_script: ${JSON.stringify(v.in)}`, () => assert.equal(isForeignScript(v.in), v.out));
+}
+test("foreignScriptShare: shares, accented Latin, allow-list", () => {
+  assert.equal(foreignScriptShare(""), 0);
+  assert.equal(foreignScriptShare("12 !?"), 0);
+  assert.equal(foreignScriptShare("就说"), 1);
+  assert.equal(foreignScriptShare("ab就说"), 0.5);
+  assert.equal(foreignScriptShare("café déjà vu"), 0);
+  assert.equal(isForeignScript("नमस्ते"), true);
+  assert.equal(isForeignScript("नमस्ते", ["Bengali", "Latin", "Devanagari"]), false);
+  assert.equal(isForeignScript("就说那个。", []), false, "an empty allow-list switches the guard off");
+});
 for (const v of vectors.detect_language) {
   test(`detect_language: ${JSON.stringify(v.in)}`, () => assert.equal(detectLanguage(v.in), v.out));
 }

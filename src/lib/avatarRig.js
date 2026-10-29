@@ -27,6 +27,8 @@
   Everything is guarded: a missing bone or morph just disables that detail.
 */
 import * as THREE from "three";
+import { FaceRig } from "./faceRig.js";
+import { resolveStyle, kindInfo, pickGesture, gestureDelay, gestureVariation, chooseArms } from "./bodyLanguage.js";
 
 const V3 = THREE.Vector3;
 const Q = THREE.Quaternion;
@@ -159,8 +161,15 @@ export const POSES = {
   open: { upper: [0.22, -0.93, 0.28], fore: [0.38, -0.25, 0.89], hand: [0.4, -0.2, 0.89] },
   point: { upper: [0.14, -0.95, 0.28], fore: [0.06, 0.3, 0.95], hand: [0.06, 0.25, 0.97] },
   palm: { upper: [0.18, -0.94, 0.28], fore: [0.12, -0.15, 0.98], hand: [0.12, -0.1, 0.99] },
+  // bigger arc, hand lifted and out — storytelling
+  flourish: { upper: [0.26, -0.88, 0.3], fore: [0.42, 0.38, 0.82], hand: [0.42, 0.34, 0.84] },
+  // hands up and out, elbows in: "who knows?"
+  shrug: { upper: [0.28, -0.93, 0.18], fore: [0.42, 0.2, 0.88], hand: [0.4, 0.3, 0.86] },
+  // hands together in front of the belt — professional, calm
+  clasp: { upper: [0.1, -0.97, 0.2], fore: [-0.62, -0.28, 0.73], hand: [-0.75, -0.1, 0.65] },
+  // hand up to the chin — thinking
+  chin: { upper: [0.1, -0.85, 0.5], fore: [-0.3, 0.72, 0.62], hand: [-0.25, 0.75, 0.6] },
 };
-const GESTURES = ["explain", "open", "palm", "explain", "point"];
 
 const _pq = new Q();
 const _bq = new Q();
@@ -246,12 +255,16 @@ export class AvatarRig {
    */
   constructor(scene, animations = [], cfg = {}) {
     this.cfg = { gestures: true, ...cfg };
+    this.style = resolveStyle(cfg.style || cfg.id);
     this.bones = findBones(scene);
     this.morphs = collectMorphs(scene);
     this.measure = fitToStage(scene, this.bones, cfg.height || 1.75);
     this.holder = this.measure.holder;
     this.scene = scene;
     this.skinned = !!this.bones.head && !!this.bones.hips;
+
+    // Lip-sync / blink / expression patches (built now, while the body is in its bind pose).
+    this.face = new FaceRig(scene, this.bones.head || scene, cfg.face || {});
 
     // Mirror the character: +1 when its left arm is at +X (facing the camera at +Z).
     this.flip = this.skinned ? sideOf(this.bones) : 1;
@@ -284,12 +297,18 @@ export class AvatarRig {
       }
       idle.play();
       this.actions.idle = idle;
-      if (anim.speaking === "loop") {
+      if (anim.speaking === "loop" || anim.speaking === "signature") {
         const talk = this.mixer.clipAction(clip.clone());
         talk.setEffectiveWeight(0);
         talk.play();
         this.actions.talk = talk;
-        this.clipDrivesArms = true;
+        // "loop": the clip IS the speaking animation. "signature": the clip is played now
+        // and then (a few seconds, every ~15 s) and the rig's own varied gestures fill the rest.
+        this.clipDrivesArms = anim.speaking === "loop";
+        if (anim.speaking === "signature") {
+          talk.paused = true;
+          this.sig = { active: false, t0: 0, dur: clip.duration || 3, next: Infinity, wasSpeaking: false };
+        }
       }
       // glTF track names use sanitized node names ("mixamorig:Hips_01" -> "mixamorigHips_01")
       this.clipTracks = new Set(clip.tracks.map((t) => t.name.split(".")[0]));
@@ -321,6 +340,10 @@ export class AvatarRig {
       smile: 0,
       brow: 0,
       gestureAt: 2,
+      lastGesture: -10,
+      recent: [], // the last gesture kinds, newest first
+      emph: false, // a loud syllable happened this frame
+      browFlash: 0,
       talk: 0, // 0..1 weight of "speaking" attitude
       listen: 0,
       think: 0,
@@ -331,14 +354,20 @@ export class AvatarRig {
   // ---- arms ---------------------------------------------------------------------
   _armTargets(arm, kind, e, t) {
     const rest = POSES.rest;
-    const g = POSES[kind] || POSES.rest;
-    const ph = arm.state.phase;
-    const sway = e * 0.08;
+    const info = kindInfo(kind);
+    const g = POSES[info.pose] || POSES.rest;
+    const st = arm.state;
+    const ph = st.phase;
+    const sway = e * 0.08 * (info.sway ?? 1);
+    const f = info.freq || 5;
+    const j = st.jit || [0, 0, 0];
     const upper = lerpDir(dir(arm.side, rest.upper), dir(arm.side, g.upper), e);
     const foreRaw = lerpDir(dir(arm.side, rest.fore), dir(arm.side, g.fore), e);
-    // hand rhythm while gesturing
-    foreRaw.y += sway * Math.sin(t * 5.2 + ph);
-    foreRaw.x += sway * 0.6 * Math.cos(t * 3.9 + ph) * arm.side;
+    // this gesture's own small offset, then the hand rhythm of its kind
+    foreRaw.x += j[0] * e * arm.side;
+    foreRaw.y += j[1] * e + sway * Math.sin(t * f + ph);
+    foreRaw.z += j[2] * e;
+    foreRaw.x += sway * 0.6 * Math.cos(t * f * 0.75 + ph) * arm.side;
     const fore = foreRaw.normalize();
     const hand = lerpDir(dir(arm.side, rest.hand), dir(arm.side, g.hand), e);
     return { upper, fore, hand };
@@ -351,11 +380,13 @@ export class AvatarRig {
       if (fromRest) for (const b of chain) b.quaternion.copy(this.rest.get(b));
       const before = chain.map((b) => b.quaternion.clone());
 
-      const { kind, e } = arm.state;
-      const T = this._armTargets(arm, kind, e, t);
+      const { kind, e, amp = 1 } = arm.state;
+      const eff = clamp(e * amp, 0, 1.25);
+      const T = this._armTargets(arm, kind, eff, t);
       if (arm.shoulder) {
         // drop the collar a little so the shoulder line looks relaxed, not shrugged
-        aimBone(arm.shoulder, arm.arm, new V3(arm.side * 0.97, -0.2 * (1 - e * 0.5), 0.05).normalize());
+        const lift = (kindInfo(kind).lift || 0) * e;
+        aimBone(arm.shoulder, arm.arm, new V3(arm.side * 0.97, -0.2 * (1 - e * 0.5) + lift, 0.05).normalize());
       }
       aimBone(arm.arm, arm.fore, T.upper);
       aimBone(arm.fore, arm.hand, T.fore);
@@ -371,30 +402,116 @@ export class AvatarRig {
     }
   }
 
-  _scheduleGestures(t, speaking) {
+  /** Start one gesture on the named arms. */
+  _startGesture(names, kind, t) {
+    const v = gestureVariation(this.style, kind);
+    for (const arm of this.arms) {
+      if (!names.includes(arm.name)) continue;
+      // the second hand of a two-handed gesture is slightly out of step, like a real person's
+      const second = names.length > 1 && arm !== this.arms.find((a) => names.includes(a.name));
+      arm.state = {
+        kind,
+        t0: t + (second ? 0.08 + Math.random() * 0.12 : 0),
+        dur: v.dur,
+        e: 0,
+        amp: v.amp * (second ? 0.92 : 1),
+        jit: second ? [-v.jit[0], v.jit[1] * 0.7, v.jit[2]] : v.jit,
+        phase: second ? v.phase + 1.7 : v.phase,
+      };
+    }
+    this.s.recent = [kind, ...this.s.recent].slice(0, 3);
+    this.s.lastGesture = t;
+    this.s.browFlash = Math.max(this.s.browFlash, 0.3 * (this.style.face.brow || 0));
+  }
+
+  /** An arm pose held for as long as the avatar is thinking / listening. */
+  _holdPose(t, kind, level, names) {
+    for (const arm of this.arms) {
+      if (!names.includes(arm.name)) continue;
+      const st = arm.state;
+      if (st.hold === kind) {
+        st.e = level;
+        if (level < 0.01) arm.state = { kind: "rest", t0: 0, dur: 0, e: 0, phase: st.phase };
+      } else if (level > 0.05 && st.kind === "rest") {
+        arm.state = { kind, hold: kind, t0: t, dur: 1, e: level, amp: 1, jit: [0, 0, 0], phase: st.phase };
+      }
+    }
+  }
+
+  _scheduleGestures(t, speaking, input) {
+    const g = this.style.gestures;
+    const s = this.s;
+
     for (const arm of this.arms) {
       const st = arm.state;
-      if (st.kind === "rest") continue;
+      if (st.kind === "rest" || st.hold) continue;
       const p = (t - st.t0) / st.dur;
-      if (p >= 1) {
-        st.kind = "rest";
-        st.e = 0;
+      if (p < 0) {
+        st.e = 0; // waiting for its (slightly late) start
+      } else if (p >= 1) {
+        arm.state = { kind: "rest", t0: 0, dur: 0, e: 0, phase: st.phase };
       } else {
         // ease in over the first 22 %, hold, ease out over the last 30 %
         st.e = p < 0.22 ? smooth(p / 0.22) : p > 0.7 ? smooth((1 - p) / 0.3) : 1;
       }
     }
-    if (!speaking || t < this.s.gestureAt) return;
+
+    // poses that belong to a state (thinking / listening)
+    if (this.style.thinkPose) this._holdPose(t, this.style.thinkPose, s.think, ["right"]);
+    if (this.style.listenPose) this._holdPose(t, this.style.listenPose, s.listen, this.arms.map((a) => a.name));
+
+    if (this.sig?.active) return; // the signature clip owns the body for a moment
     const free = this.arms.filter((a) => a.state.kind === "rest");
-    if (free.length) {
-      const kind = GESTURES[Math.floor(Math.random() * GESTURES.length)];
-      const both = (kind === "open" || kind === "palm" || Math.random() < 0.15) && free.length === 2;
-      const right = free.find((a) => a.name === "right") || free[0];
-      for (const arm of both ? free : [Math.random() < 0.7 ? right : free[0]]) {
-        arm.state = { kind, t0: t, dur: 1.4 + Math.random() * 1.2, e: 0, phase: Math.random() * 6.28 };
+    if (!free.length) return;
+
+    const due = t >= s.gestureAt;
+    const beat = speaking && g.emphasis && s.emph && t - s.lastGesture > g.minGap && t > s.gestureAt - 1.2;
+    const idle = !speaking && g.idle > 0 && due && Math.random() < g.idle;
+    if (!((speaking && due) || beat || idle)) return;
+
+    const pick = pickGesture(this.style, s.recent);
+    const names = chooseArms(pick.hands, free.map((a) => a.name));
+    if (names.length) this._startGesture(names, pick.kind, t);
+    s.gestureAt = t + gestureDelay(this.style);
+  }
+
+  /**
+   * Executive: the model's own gesture clip as an occasional signature move. It starts a
+   * few seconds into a reply and then every ~15 s (random), never while a rig gesture is
+   * in progress, and is cross-faded in and out so there is no jump.
+   */
+  _signature(t, speaking) {
+    const sig = this.sig;
+    const cfg = this.style.signature || { first: [3, 6], every: [11, 20] };
+    const act = this.actions;
+    const rnd = ([lo, hi]) => lo + Math.random() * (hi - lo);
+    if (speaking && !sig.wasSpeaking) sig.next = Math.max(sig.next === Infinity ? 0 : sig.next, t + rnd(cfg.first));
+    if (!speaking && sig.wasSpeaking && !sig.active) sig.next = Infinity;
+    sig.wasSpeaking = speaking;
+
+    if (!sig.active) {
+      const handsBusy = this.arms.some((a) => a.state.kind !== "rest" && !a.state.hold && a.state.e > 0.02);
+      if (speaking && t >= sig.next && !handsBusy) {
+        sig.active = true;
+        sig.t0 = t;
+        act.talk.time = 0;
+        act.talk.paused = false;
       }
     }
-    this.s.gestureAt = t + 1.2 + Math.random() * 1.8;
+    let w = 0;
+    if (sig.active) {
+      const p = (t - sig.t0) / sig.dur;
+      if (p >= 1) {
+        sig.active = false;
+        sig.next = t + rnd(cfg.every);
+        act.talk.paused = true;
+        act.talk.time = 0;
+      } else {
+        w = smooth(clamp(p / 0.14, 0, 1)) * smooth(clamp((1 - p) / 0.18, 0, 1));
+      }
+    }
+    act.talk.setEffectiveWeight(w);
+    act.idle.setEffectiveWeight(1 - w);
   }
 
   // ---- per frame ------------------------------------------------------------------
@@ -423,14 +540,17 @@ export class AvatarRig {
     s.ampPrev = s.amp;
     s.amp = damp(s.amp, amp, amp > s.amp ? 28 : 14, dt);
     const rise = s.amp - s.ampPrev;
-    if (rise > 0.07 && speaking) s.nod = Math.min(1, s.nod + 0.7); // emphasis → small nod
+    s.emph = rise > 0.07 && speaking;
+    if (s.emph) s.nod = Math.min(1, s.nod + 0.7); // emphasis → small nod
     s.nod = damp(s.nod, 0, 7, dt);
 
     // ---- base layer
     // 1) take back last frame's offsets wherever nothing else has rewritten the bone
     for (const [bone, st] of this.track) if (bone.quaternion.equals(st.post)) bone.quaternion.copy(st.pre);
     if (this.mixer) {
-      if (this.actions.talk) {
+      if (this.actions.talk && this.sig) {
+        this._signature(t, speaking);
+      } else if (this.actions.talk) {
         this.actions.talk.setEffectiveWeight(s.talk);
         this.actions.idle.setEffectiveWeight(1 - s.talk);
         const quiet = s.talk < 0.02; // do not burn through the clip while nobody is talking
@@ -446,7 +566,7 @@ export class AvatarRig {
     // ---- arms
     if (this.arms.length) {
       if (!this.clipDrivesArms) {
-        this._scheduleGestures(t, speaking);
+        this._scheduleGestures(t, speaking, input);
         // rest posture always for clip-less rigs; blended in only while gesturing for clip rigs
         const gesturing = this.arms.reduce((m, a) => Math.max(m, a.state.e), 0);
         const w = this.baseArms ? 1 : clamp(gesturing * 1.5, 0, 1);
@@ -460,24 +580,30 @@ export class AvatarRig {
       h.rotation.y = Math.sin(t * 0.33) * 0.025 + s.look.x * 0.05;
       h.scale.y = this.measure.scale * (1 + Math.sin(t * 1.45) * 0.0015 + s.amp * 0.002);
       h.scale.x = h.scale.z = this.measure.scale;
+      this._face(dt, t, speaking, listening, input);
       return;
     }
 
-    // ---- spine: breathing + weight shift
+    // ---- spine: breathing + weight shift (+ a lean toward the listener for warm characters)
+    const B = this.style.body;
     const breathe = Math.sin(t * 1.45) * 0.5 + 0.5;
-    rotateWorld(b.hips, 0, Math.sin(t * 0.37) * 0.012, Math.sin(t * 0.29) * 0.01);
-    rotateWorld(b.spine, -0.004 - breathe * 0.006, Math.sin(t * 0.37 + 1) * -0.006, 0);
-    rotateWorld(b.spine1, -breathe * 0.008, 0, 0);
-    rotateWorld(b.spine2, -breathe * 0.01 + s.listen * 0.012, 0, Math.sin(t * 0.29) * -0.006);
+    const lean = B.lean * s.talk * 0.03;
+    rotateWorld(b.hips, 0, Math.sin(t * 0.37) * 0.012 * B.sway, Math.sin(t * 0.29) * 0.01 * B.sway);
+    rotateWorld(b.spine, -0.004 - breathe * 0.006, Math.sin(t * 0.37 + 1) * -0.006 * B.sway, 0);
+    rotateWorld(b.spine1, -breathe * 0.008 + lean * 0.5, 0, 0);
+    rotateWorld(b.spine2, -breathe * 0.01 + s.listen * 0.012 + lean * 0.5, 0, Math.sin(t * 0.29) * -0.006 * B.sway);
 
     // ---- head
+    const H = this.style.head;
     const n1 = Math.sin(t * 0.61) * 0.5 + Math.sin(t * 1.07 + 1.3) * 0.5;
     const n2 = Math.sin(t * 0.47 + 0.6) * 0.5 + Math.sin(t * 0.93 + 2.1) * 0.5;
     const n3 = Math.sin(t * 0.39 + 2.2) * 0.5 + Math.sin(t * 0.83) * 0.5;
     const talkAmt = s.talk;
-    let yaw = n1 * (0.035 + talkAmt * 0.035) + s.look.x * 0.22 * (1 - talkAmt * 0.5);
-    let pitch = n2 * 0.022 - s.look.y * 0.1 * (1 - talkAmt * 0.5) + s.nod * 0.07 + s.amp * talkAmt * 0.03;
-    let roll = n3 * 0.02 + s.listen * 0.06 * Math.sin(t * 0.8) - s.listen * 0.035;
+    // slow side-to-side look-around (Security): flat ends so it pauses at each side
+    const scan = H.scan ? clamp(Math.sin(t * 0.52) * 1.7, -1, 1) * H.scan * (1 - talkAmt * 0.75) * (1 - s.listen * 0.5) : 0;
+    let yaw = n1 * (0.035 + talkAmt * 0.035) * H.yaw + s.look.x * 0.22 * (1 - talkAmt * 0.5) + scan;
+    let pitch = n2 * 0.022 * H.pitch - s.look.y * 0.1 * (1 - talkAmt * 0.5) + s.nod * 0.07 * H.nod + s.amp * talkAmt * 0.03;
+    let roll = n3 * 0.02 * H.roll + s.listen * 0.06 * Math.sin(t * 0.8) * H.roll - s.listen * 0.035 + (s.listen + s.think) * H.tilt;
     // thinking: gaze up and to the side, slow
     yaw += s.think * (0.12 + 0.04 * Math.sin(t * 0.7));
     pitch += s.think * -0.07;
@@ -507,7 +633,6 @@ export class AvatarRig {
 
   _face(dt, t, speaking, listening, input) {
     const m = this.morphs;
-    if (!m.meshes.length) return;
     const s = this.s;
     const bands = input.bands || [0, 0, 0];
     const open = clamp(s.amp * 1.7, 0, 1) * (speaking ? 1 : 0);
@@ -516,7 +641,7 @@ export class AvatarRig {
     const bl = s.blink;
     if (bl.t < 0 && t > bl.next) {
       bl.t = 0;
-      bl.next = t + 1.6 + Math.random() * 4.2;
+      bl.next = t + (1.6 + Math.random() * 4.2) / (this.style.face.blink || 1);
       if (Math.random() < 0.2) bl.next = t + 0.25; // occasional double blink
     }
     let blink = 0;
@@ -526,24 +651,35 @@ export class AvatarRig {
       blink = p < 0.4 ? p / 0.4 : Math.max(0, 1 - (p - 0.4) / 0.6);
       if (p >= 1) bl.t = -1;
     }
-    m.set("blink", blink);
 
     // mouth: open from loudness; shape from the spectrum (low = round "aa/oo", high = wide "ee")
-    const [low, mid, high] = bands;
+    const [low, , high] = bands;
     const wide = clamp((high * 1.4 - low * 0.6) * 1.5, 0, 1);
     const round = clamp((low * 1.2 - high) * 1.2, 0, 1);
-    m.set("jaw", open * 0.75);
-    m.set("mouth", open);
-    m.set("visemeAa", open * (0.4 + (1 - wide) * 0.4));
-    m.set("visemeEe", open * wide * 0.5);
-    m.set("visemeOu", open * round * 0.4);
 
-    // expression: a warm, slightly changing smile; brows lift on emphasis
-    const base = 0.1 + s.listen * 0.12 + s.talk * 0.04;
-    s.smile = damp(s.smile, base + (Math.sin(t * 0.21) * 0.5 + 0.5) * 0.1, 3, dt);
-    s.brow = damp(s.brow, s.nod * 0.5 + s.listen * 0.12 + s.think * 0.2, 6, dt);
-    m.set("smile", s.smile);
-    m.set("browUp", s.brow);
+    // expression: this character's own smile; brows lift on emphasis and when a gesture starts
+    const F = this.style.face;
+    s.browFlash = damp(s.browFlash, 0, 5, dt);
+    const base = F.smile + s.listen * 0.12 + s.talk * 0.04;
+    s.smile = damp(s.smile, base + (Math.sin(t * 0.21) * 0.5 + 0.5) * F.smileVar, 3, dt);
+    s.brow = damp(s.brow, (s.nod * 0.5 + s.listen * 0.12 + s.think * 0.2 + s.browFlash) * F.brow, 6, dt);
+
+    // models that carry their own morph targets
+    if (m.meshes.length) {
+      // some models' own morphs are subtle: avatars.js can scale them (face.gain), e.g. Writer
+      const G = this.cfg.face?.gain || {};
+      const gm = G.mouth ?? 1;
+      m.set("blink", blink);
+      m.set("jaw", open * 0.75 * gm);
+      m.set("mouth", open * gm);
+      m.set("visemeAa", open * (0.4 + (1 - wide) * 0.4));
+      m.set("visemeEe", open * wide * 0.5);
+      m.set("visemeOu", open * round * 0.4);
+      m.set("smile", s.smile * (G.smile ?? 1));
+      m.set("browUp", s.brow);
+    }
+    // everything the file lacks (generated morphs, mouth interior, eyelids)
+    this.face?.apply({ open, wide, round, smile: s.smile, brow: s.brow, blink });
   }
 
   get capabilities() {
@@ -552,6 +688,7 @@ export class AvatarRig {
       arms: this.arms.length === 2,
       clip: !!this.mixer,
       eyes: !!(this.bones.lefteye && this.bones.righteye),
+      face: this.face?.kind || "none",
       morphs: Object.fromEntries(Object.entries(this.morphs.has).map(([k, v]) => [k, v.length > 0])),
     };
   }
@@ -560,6 +697,7 @@ export class AvatarRig {
    *  model is shown again when the person returns to a mode), so they are only freed
    *  with `{ resources: true }`. */
   dispose({ resources = false } = {}) {
+    this.face?.dispose();
     this.mixer?.stopAllAction();
     this.mixer?.uncacheRoot(this.scene);
     if (!resources) return;

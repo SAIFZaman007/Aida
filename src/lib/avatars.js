@@ -28,7 +28,7 @@ const FEMALE_HINTS = [
   "catherine", "female", "google uk english female", "google us english female",
 ];
 
-const make = (persona, file, label, gender, animation = {}) => ({
+const make = (persona, file, label, gender, animation = {}, extra = {}) => ({
   id: persona,
   persona,
   label,
@@ -37,16 +37,39 @@ const make = (persona, file, label, gender, animation = {}) => ({
   gender,
   voiceHints: gender === "female" ? FEMALE_HINTS : MALE_HINTS,
   animation,
+  ...extra,
 });
 
 export const AVATARS = {
-  nonstop: make("nonstop", "non-stop.glb", "Non-stop", "male"),
-  executive: make("executive", "executive.glb", "Executive", "male", { idle: "hold", holdAt: 0, speaking: "loop" }),
-  coder: make("coder", "coder.glb", "Coder", "male", { idle: "loop" }),
-  architect: make("architect", "architect.glb", "Architect", "male"),
-  security: make("security", "security.glb", "Security", "male", { idle: "loop" }),
-  researcher: make("researcher", "researcher.glb", "Researcher", "male"),
-  writer: make("writer", "writer.glb", "Writer", "female"),
+  nonstop: make("nonstop", "non-stop.glb", "Non-stop", "male", {}, {
+    face: { mouth: { y: 0.0, half: 0.027 }, eyes: { w: 0.0135, h: 0.009 } },
+  }),
+  executive: make("executive", "executive.glb", "Executive", "male", { idle: "hold", holdAt: 0, speaking: "signature" }, {
+    face: { mouth: { y: 0.013, half: 0.02 }, eyes: { y: 0.08, x: 0.03, w: 0.0135, h: 0.0075 } },
+  }),
+  coder: make("coder", "coder.glb", "Coder", "male", { idle: "loop" }, {
+    face: { mouth: { y: 0.013, half: 0.02 }, eyes: { y: 0.078, x: 0.0295, w: 0.0135, h: 0.0075 } },
+  }),
+  // a static model (no skeleton): coordinates are absolute, in metres on the 1.75 m stage
+  architect: make("architect", "architect.glb", "Architect", "male", {}, {
+    face: {
+      origin: { x: 0, y: 1.55, z: 0 },
+      mouth: { y: 0.009, half: 0.022 },
+      eyes: { y: 0.0735, x: 0.034, w: 0.0185, h: 0.0095 },
+      chin: 0.06,
+      jaw: 0.012,
+    },
+  }),
+  security: make("security", "security.glb", "Security", "male", { idle: "loop" }, {
+    face: { mouth: { y: 0.0, half: 0.024 }, eyes: { w: 0.0135, h: 0.0085 } },
+  }),
+  researcher: make("researcher", "researcher.glb", "Researcher", "male", {}, {
+    face: { mouth: { y: 0.02, half: 0.026 }, eyes: { w: 0.0125, h: 0.0085 }, lidBoost: 1.15 },
+  }),
+  writer: make("writer", "writer.glb", "Writer", "female", {}, {
+    // her own mouth/smile morphs are subtle: scale them so speech and smiles read clearly
+    face: { eyes: { w: 0.0125, h: 0.0085 }, lidBoost: 1.55, gain: { mouth: 2, smile: 1.5 } },
+  }),
 };
 
 export const DEFAULT_PERSONA = "executive";

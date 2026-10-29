@@ -46,6 +46,31 @@ export function dominantLanguage(text) {
   return bn > latin ? "bn" : "en";
 }
 
+/** Share of letters at or above which a transcript counts as noise in another language. */
+export const FOREIGN_SCRIPT_LIMIT = 0.4;
+const DEFAULT_SCRIPTS = ["Bengali", "Latin"];
+
+/** Fraction (0..1) of the letters written in a script outside `allowed`
+ *  (Unicode script names). Digits, punctuation and combining marks are ignored. */
+export function foreignScriptShare(text, allowed = DEFAULT_SCRIPTS) {
+  const res = allowed.filter(Boolean).map((a) => new RegExp(`\\p{Script=${a}}`, "u"));
+  let total = 0;
+  let foreign = 0;
+  for (const ch of text || "") {
+    if (!LETTER.test(ch)) continue;
+    total++;
+    if (!res.some((re) => re.test(ch))) foreign++;
+  }
+  return total ? foreign / total : 0;
+}
+
+/** True when the text is (mostly) in a script the assistant does not speak — speech
+ *  models invent Chinese/Russian/... words from room noise. Mirrors the backend guard. */
+export function isForeignScript(text, allowed = DEFAULT_SCRIPTS, limit = FOREIGN_SCRIPT_LIMIT) {
+  if (!allowed.some(Boolean)) return false;
+  return foreignScriptShare(text, allowed) >= limit;
+}
+
 // ---- markdown -> plain speech text ------------------------------------------
 /** Remove markdown/markup so only speakable prose remains. Never touches
  *  Bengali characters (ZWJ/ZWNJ are part of Bengali spelling and are kept). */

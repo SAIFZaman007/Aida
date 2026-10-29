@@ -1,68 +1,41 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useGLTF, useProgress } from "@react-three/drei";
-import { Component, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Component, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import { speechBus } from "../lib/speech.js";
-import { AvatarRig, portraitFraming } from "../lib/avatarRig.js";
+import { AvatarRig, findBones, fitToStage, portraitFraming } from "../lib/avatarRig.js";
 import { allAvatars } from "../lib/avatars.js";
+import { loadAvatar, peekAvatar, preloadAvatars } from "../lib/avatarLoader.js";
 
 /*
   AvatarStage — one avatar per mode, posed and alive.
 
-  • The avatar is chosen by the caller (it follows the selected mode).
-  • Every model goes through lib/avatarRig.js: same real-world height, feet on the
-    floor, a relaxed professional posture (no floating hands), breathing, head and
-    eye movement, glances, blinks, hand gestures while speaking, and a mouth that
-    follows the REAL voice (loudness + spectrum from the audio player).
-  • The eyes follow the pointer a little when it is over the stage and return to
-    eye contact when it leaves.
-  • The other avatars are fetched quietly after the first one is on screen, so
-    switching modes is instant.
-  • A missing / invalid file (e.g. a server that answers index.html) never throws:
-    a clean animated "AI core" is shown instead.
+  Loading (v2.4): the stage asks lib/avatarLoader.js for the avatar of the selected
+  mode and keeps showing the PREVIOUS one until the new one is ready, so switching
+  modes never flashes a placeholder. A failed download is retried by the loader; if it
+  still fails, the reason is shown on the stage with a Retry button (and in the console
+  as "[avatar] …") instead of silently drawing a placeholder.
+
+  Drawing: every model goes through lib/avatarRig.js — same height, relaxed posture,
+  breathing, gaze, blinks, gestures and a face that lip-syncs to the REAL voice
+  (loudness + spectrum from the audio player). If a model ever breaks the rig, it is
+  shown un-animated rather than not at all.
 */
 
-/** True when the URL really serves a glTF binary/JSON (reads 4 bytes, then hangs up). */
-async function looksLikeGltf(url) {
-  try {
-    const res = await fetch(url, { headers: { Range: "bytes=0-3" } });
-    if (!res.ok || !res.body) return false;
-    const reader = res.body.getReader();
-    const { value } = await reader.read();
-    reader.cancel().catch(() => {});
-    if (!value || value.length < 1) return false;
-    const isGlb = value[0] === 0x67 && value[1] === 0x6c && value[2] === 0x54 && value[3] === 0x46; // "glTF"
-    return isGlb || value[0] === 0x7b; // "{" = glTF JSON
-  } catch {
-    return false;
-  }
-}
-
-function RiggedAvatar({ avatar, activity, look, onReady }) {
-  const gltf = useGLTF(avatar.url);
+/** Animated model. */
+function RiggedAvatar({ avatar, gltf, activity, look }) {
   const { camera, size } = useThree();
-
   const rig = useMemo(
-    () => new AvatarRig(SkeletonUtils.clone(gltf.scene), gltf.animations, { animation: avatar.animation }),
+    () =>
+      new AvatarRig(SkeletonUtils.clone(gltf.scene), gltf.animations, {
+        animation: avatar.animation,
+        face: avatar.face,
+        style: avatar.style,
+        id: avatar.id,
+      }),
     [gltf, avatar],
   );
   useEffect(() => () => rig.dispose(), [rig]);
-  useEffect(() => {
-    onReady?.(avatar.id);
-  }, [rig, avatar.id, onReady]);
-
-  // Head-and-torso portrait, like a video call; recomputed when the panel is resized.
-  useLayoutEffect(() => {
-    const f = portraitFraming(rig.measure, {
-      fov: camera.fov,
-      aspect: size.width / Math.max(1, size.height),
-    });
-    camera.position.set(0, f.y, f.distance);
-    camera.lookAt(0, f.y, 0);
-    camera.near = 0.05;
-    camera.far = 100;
-    camera.updateProjectionMatrix();
-  }, [rig, camera, size.width, size.height]);
+  useFraming(rig.measure, camera, size);
 
   useFrame((_, dt) => {
     const a = activity.current;
@@ -80,13 +53,36 @@ function RiggedAvatar({ avatar, activity, look, onReady }) {
   return <primitive object={rig.holder} />;
 }
 
-/* Refined "AI core" placeholder — intentional and premium, not a cartoon face. */
+/** Safe mode: the model, fitted and framed, without any animation. */
+function PlainAvatar({ gltf }) {
+  const { camera, size } = useThree();
+  const fitted = useMemo(() => {
+    const scene = SkeletonUtils.clone(gltf.scene);
+    return fitToStage(scene, findBones(scene));
+  }, [gltf]);
+  useFraming(fitted, camera, size);
+  return <primitive object={fitted.holder} />;
+}
+
+/** Head-and-torso portrait, like a video call; recomputed when the panel is resized. */
+function useFraming(measure, camera, size) {
+  useLayoutEffect(() => {
+    const f = portraitFraming(measure, { fov: camera.fov, aspect: size.width / Math.max(1, size.height) });
+    camera.position.set(0, f.y, f.distance);
+    camera.lookAt(0, f.y, 0);
+    camera.near = 0.05;
+    camera.far = 100;
+    camera.updateProjectionMatrix();
+  }, [measure, camera, size.width, size.height]);
+}
+
+/* Refined "AI core" — only shown before the very first avatar arrives. */
 function CorePlaceholder() {
   const shell = useRef();
   const inner = useRef();
   const { camera } = useThree();
   useLayoutEffect(() => {
-    camera.position.set(0, 0, 5.6); // far enough that the whole shell is in view
+    camera.position.set(0, 0, 5.6);
     camera.lookAt(0, 0, 0);
     camera.updateProjectionMatrix();
   }, [camera]);
@@ -103,30 +99,18 @@ function CorePlaceholder() {
     <group>
       <mesh ref={shell}>
         <icosahedronGeometry args={[1.25, 1]} />
-        <meshStandardMaterial
-          color="#0e7490"
-          emissive="#38e1ff"
-          emissiveIntensity={0.25}
-          wireframe
-          transparent
-          opacity={0.55}
-        />
+        <meshStandardMaterial color="#0e7490" emissive="#38e1ff" emissiveIntensity={0.25} wireframe transparent opacity={0.55} />
       </mesh>
       <mesh ref={inner}>
         <sphereGeometry args={[0.6, 48, 48]} />
-        <meshStandardMaterial
-          color="#0b141b"
-          emissive="#38e1ff"
-          emissiveIntensity={0.3}
-          roughness={0.2}
-          metalness={0.6}
-        />
+        <meshStandardMaterial color="#0b141b" emissive="#38e1ff" emissiveIntensity={0.3} roughness={0.2} metalness={0.6} />
       </mesh>
     </group>
   );
 }
 
-class Boundary extends Component {
+/** If the animated rig throws for one model, fall back to showing it plainly. */
+class RigBoundary extends Component {
   constructor(p) {
     super(p);
     this.state = { failed: false };
@@ -135,66 +119,69 @@ class Boundary extends Component {
     return { failed: true };
   }
   componentDidCatch(error) {
-    console.warn("[avatar] could not load the model:", error?.message || error);
+    console.warn(`[avatar] ${this.props.name}: animation disabled, showing the model as is —`, error?.message || error);
   }
   render() {
-    return this.state.failed ? <CorePlaceholder /> : this.props.children;
+    return this.state.failed ? this.props.fallback : this.props.children;
   }
 }
 
-/** Quietly fetch the other modes' avatars once the first is showing (one at a time). */
+/** After the first avatar is on screen, quietly fetch the others, one at a time. */
 function usePreloadOthers(current) {
+  const id = current?.id;
   useEffect(() => {
-    if (typeof navigator !== "undefined" && navigator.connection?.saveData) return undefined;
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      for (const a of allAvatars()) {
-        if (cancelled) return;
-        if (a.id === current.id) continue;
-        try {
-          useGLTF.preload(a.url);
-        } catch {
-          /* a missing file is reported when that mode is selected */
-        }
-        await new Promise((r) => setTimeout(r, 1500)); // spread out: never compete with chat traffic
-      }
+    if (!id) return undefined;
+    const conn = typeof navigator !== "undefined" ? navigator.connection : null;
+    const lowMemory = typeof navigator !== "undefined" && navigator.deviceMemory && navigator.deviceMemory <= 2;
+    if (conn?.saveData || lowMemory) return undefined; // load on demand instead
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => {
+      preloadAvatars(allAvatars().filter((a) => a.id !== id), { signal: ctrl.signal });
     }, 2500);
     return () => {
-      cancelled = true;
       clearTimeout(timer);
+      ctrl.abort();
     };
-  }, [current.id]);
-}
-
-/** Only for the avatar being OPENED — not for the quiet background fetch of the others. */
-function LoadingBar({ show }) {
-  const { active, progress } = useProgress();
-  if (!show || !active) return null;
-  return (
-    <div className="pointer-events-none absolute bottom-10 left-1/2 w-40 -translate-x-1/2" aria-hidden="true">
-      <div className="h-0.5 overflow-hidden rounded-full bg-cyan/15">
-        <div className="h-full bg-cyan transition-[width] duration-200" style={{ width: `${Math.max(6, progress)}%` }} />
-      </div>
-    </div>
-  );
+  }, [id]);
 }
 
 export default function AvatarStage({ avatar, activity }) {
-  const [valid, setValid] = useState(null); // null = checking
   const act = useRef({ speaking: false, listening: false, thinking: false });
   act.current = activity;
   const look = useRef({ x: 0, y: 0 });
-  const [readyId, setReadyId] = useState(null); // the avatar currently on screen
-  usePreloadOthers(avatar);
+
+  const [shown, setShown] = useState(() => {
+    const hit = peekAvatar(avatar);
+    return hit ? { avatar, gltf: hit.gltf } : null;
+  });
+  const [load, setLoad] = useState({ status: "loading", progress: 0, error: null });
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    let alive = true;
-    setValid(null);
-    looksLikeGltf(avatar.url).then((ok) => alive && setValid(ok));
-    return () => {
-      alive = false;
-    };
-  }, [avatar.url]);
+    const ctrl = new AbortController();
+    const hit = peekAvatar(avatar);
+    if (hit) {
+      setShown({ avatar, gltf: hit.gltf });
+      setLoad({ status: "ready", progress: 1, error: null });
+      return () => ctrl.abort();
+    }
+    setLoad({ status: "loading", progress: 0, error: null });
+    loadAvatar(avatar, {
+      signal: ctrl.signal,
+      onProgress: (p) => setLoad((l) => (l.status === "loading" ? { ...l, progress: p } : l)),
+    })
+      .then(({ gltf }) => {
+        setShown({ avatar, gltf });
+        setLoad({ status: "ready", progress: 1, error: null });
+      })
+      .catch((error) => {
+        if (error?.code === "aborted") return;
+        setLoad({ status: "error", progress: 0, error });
+      });
+    return () => ctrl.abort();
+  }, [avatar, attempt]);
+
+  usePreloadOthers(shown?.avatar);
 
   function onPointerMove(e) {
     const r = e.currentTarget.getBoundingClientRect();
@@ -206,17 +193,14 @@ export default function AvatarStage({ avatar, activity }) {
     look.current.y = 0;
   }
 
-  const state = activity.speaking
-    ? "speaking"
-    : activity.listening
-      ? "listening"
-      : activity.thinking
-        ? "thinking"
-        : "standby";
+  const state = activity.speaking ? "speaking" : activity.listening ? "listening" : activity.thinking ? "thinking" : "standby";
+  const label = (shown?.avatar || avatar).label;
 
   return (
     <div
       className="relative h-full w-full"
+      data-avatar={shown?.avatar.id || ""}
+      data-load={load.status}
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
     >
@@ -235,18 +219,40 @@ export default function AvatarStage({ avatar, activity }) {
         <directionalLight position={[2, 3, 4]} intensity={1.6} />
         <directionalLight position={[-3, 1.5, 2]} intensity={0.8} color="#38e1ff" />
         <directionalLight position={[0, 2, -3]} intensity={0.5} color="#ff3b5c" />
-        {valid ? (
-          <Boundary key={avatar.url}>
-            <Suspense fallback={<CorePlaceholder />}>
-              <RiggedAvatar avatar={avatar} activity={act} look={look} onReady={setReadyId} />
-            </Suspense>
-          </Boundary>
+        {shown ? (
+          <RigBoundary key={shown.avatar.id} name={shown.avatar.id} fallback={<PlainAvatar gltf={shown.gltf} />}>
+            <RiggedAvatar avatar={shown.avatar} gltf={shown.gltf} activity={act} look={look} />
+          </RigBoundary>
         ) : (
           <CorePlaceholder />
         )}
       </Canvas>
 
-      <LoadingBar show={readyId !== avatar.id} />
+      {load.status === "loading" && (
+        <div className="pointer-events-none absolute bottom-10 left-1/2 w-40 -translate-x-1/2" aria-hidden="true">
+          <div className="h-0.5 overflow-hidden rounded-full bg-cyan/15">
+            <div className="h-full bg-cyan transition-[width] duration-200" style={{ width: `${Math.max(6, Math.round(load.progress * 100))}%` }} />
+          </div>
+        </div>
+      )}
+
+      {load.status === "error" && (
+        <div
+          role="alert"
+          data-testid="avatar-error"
+          className="absolute inset-x-4 bottom-14 rounded-lg border border-crimson/40 bg-void-900/90 px-4 py-3 text-center backdrop-blur-xs"
+        >
+          <p className="font-hud text-[11px] uppercase tracking-[0.2em] text-crimson">{avatar.label} avatar unavailable</p>
+          <p className="mt-1 text-xs text-steel">{load.error?.message || "It could not be loaded."}</p>
+          <button
+            type="button"
+            onClick={() => setAttempt((n) => n + 1)}
+            className="mt-2 rounded-md border border-cyan/40 px-3 py-1 font-hud text-[11px] uppercase tracking-wider text-cyan transition hover:bg-cyan/10"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       <div className="pointer-events-none absolute bottom-4 left-0 right-0 text-center">
         <span
@@ -258,7 +264,7 @@ export default function AvatarStage({ avatar, activity }) {
           aria-live="polite"
         >
           {state === "standby" ? "○" : "◉"} {state}
-          <span className="ml-3 text-steel/70">{avatar.label}</span>
+          <span className="ml-3 text-steel/70">{label}</span>
         </span>
       </div>
     </div>

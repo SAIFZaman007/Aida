@@ -177,3 +177,16 @@ test("messages from a replaced socket are ignored", () => {
   assert.equal(ev.final.length, 0);
   live.close();
 });
+
+test("a final carries the server's reason through (noise heard as another language)", () => {
+  const seen = [];
+  const { live } = make({ onFinal: (...a) => seen.push(a) });
+  live.connect();
+  last().say({ type: "ready" });
+  const id = live.begin();
+  live.audio(frame());
+  live.end();
+  last().say({ type: "final", id, text: "", language: "unknown", reason: "script" });
+  assert.deepEqual(seen, [[id, "", "unknown", "script"]]);
+  live.close();
+});

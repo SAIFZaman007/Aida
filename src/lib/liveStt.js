@@ -207,7 +207,7 @@ export class LiveStt {
         if (this.open.has(m.id)) this.onInterim(m.id, String(m.text || ""));
         break;
       case "final":
-        if (this.open.delete(m.id)) this.onFinal(m.id, String(m.text || ""), m.language || "unknown");
+        if (this.open.delete(m.id)) this.onFinal(m.id, String(m.text || ""), m.language || "unknown", m.reason || "");
         break;
       case "error":
         if (m.recoverable && m.id != null) {

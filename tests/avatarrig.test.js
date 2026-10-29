@@ -214,3 +214,24 @@ test("holdAt picks which frame of the clip is the standing pose", () => {
   const yaw = new THREE.Euler().setFromQuaternion(rig.bones.head.quaternion, "YXZ").y;
   assert.ok(Math.abs(yaw - 1) < 0.15, `yaw ${yaw}`); // end of the clip, plus our tiny head motion
 });
+
+test("face.gain scales a model's own mouth and smile morphs (Writer's are subtle)", () => {
+  const { root } = makeHumanoid({});
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1), new THREE.MeshBasicMaterial());
+  mesh.geometry.morphAttributes.position = [new THREE.Float32BufferAttribute(new Float32Array(24), 3), new THREE.Float32BufferAttribute(new Float32Array(24), 3)];
+  mesh.updateMorphTargets();
+  mesh.morphTargetDictionary = { mouthOpen: 0, mouthSmile: 1 };
+  mesh.morphTargetInfluences = [0, 0];
+  root.add(mesh);
+  const drive = (face) => {
+    const rig = new AvatarRig(root.clone(), [], { face });
+    const m = rig.morphs.meshes[0];
+    for (let i = 0; i < 40; i++) rig.update(1 / 30, { speaking: true, amplitude: 0.5, bands: [0.3, 0.2, 0.1] });
+    return { mouth: m.morphTargetInfluences[0], smile: m.morphTargetInfluences[1] };
+  };
+  const base = drive({});
+  const gained = drive({ gain: { mouth: 2, smile: 1.5 } });
+  assert.ok(base.mouth > 0.1, "the model's mouth opens while speaking");
+  assert.ok(Math.abs(gained.mouth / base.mouth - 2) < 0.05, `mouth gain ${gained.mouth / base.mouth}`);
+  assert.ok(gained.smile > base.smile);
+});

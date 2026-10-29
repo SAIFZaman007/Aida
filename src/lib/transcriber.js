@@ -14,6 +14,8 @@
   gets one second opinion over HTTP before we say "didn't catch that".
 */
 
+import { isForeignScript } from "./text.js";
+
 const FINAL_TIMEOUT_MS = 7000; // server settles in < 1.5 s; this only catches a stalled socket
 const SECOND_OPINION_FRAMES = 30; // 0.6 s of voiced audio
 
@@ -49,7 +51,7 @@ export class Transcriber {
     this.live =
       createLive?.({
         onInterim: (id, t) => this._interim(id, t),
-        onFinal: (id, t) => this._final(id, t),
+        onFinal: (id, t, _lang, reason) => this._final(id, t, reason),
         onLost: (ids) => this._lost(ids),
         onUtteranceError: (id, code, message) => this._refused(id, code, message),
       }) || null;
@@ -107,16 +109,20 @@ export class Transcriber {
   _interim(id, text) {
     if (this.disposed) return;
     const rec = this.records.get(id);
-    if (rec && text) this.onInterim(text);
+    if (rec && text && !isForeignScript(text)) this.onInterim(text); // no captions in a language we do not speak
   }
 
-  _final(id, raw) {
+  _final(id, raw, reason = "") {
     const rec = this.records.get(id);
     if (!rec || this.disposed) return;
     this.records.delete(id);
     clearTimeout(rec.timer);
-    const text = (raw || "").trim();
-    if (!text && rec.voiced >= SECOND_OPINION_FRAMES && rec.frames) return this._viaHttp(rec);
+    let text = (raw || "").trim();
+    // Noise heard as another language (Chinese, Russian…): that is "no speech", and a second
+    // opinion would only spend quota on the same noise.
+    const noise = reason === "script" || isForeignScript(text);
+    if (noise) text = "";
+    if (!text && !noise && rec.voiced >= SECOND_OPINION_FRAMES && rec.frames) return this._viaHttp(rec);
     this._inOrder(() => this._deliver(rec, text));
   }
 
@@ -185,6 +191,7 @@ export class Transcriber {
   _deliver(rec, text) {
     this._settle(rec);
     this.onInterim("");
+    if (text && isForeignScript(text)) text = "";
     if (text) this.onText(text);
     else this.onNoSpeech();
   }

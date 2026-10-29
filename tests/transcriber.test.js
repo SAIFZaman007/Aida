@@ -191,3 +191,55 @@ test("dispose stops everything: later results are ignored", async () => {
   assert.equal(ev.text.length, 0);
   assert.ok(live.log.includes("close"));
 });
+
+test("noise heard as Chinese is 'no speech': no caption, no text, no second opinion", async () => {
+  const { tr, live, ev } = make();
+  speak(tr, { voiced: 80 }); // plenty of voiced audio: an EMPTY result would get a second opinion
+  live.h.onInterim(1, "就说");
+  live.h.onFinal(1, "就说那个。", "unknown");
+  await sleep(10);
+  assert.deepEqual(ev.interim.filter(Boolean), [], "no caption in a language we do not speak");
+  assert.deepEqual(ev.text, []);
+  assert.equal(ev.none, 1);
+  assert.deepEqual(ev.http, [], "the same noise is not sent again");
+  tr.dispose();
+});
+
+test("the server's 'script' reason is honoured even for an empty text", async () => {
+  const { tr, live, ev } = make();
+  speak(tr, { voiced: 80 });
+  live.h.onFinal(1, "", "unknown", "script");
+  await sleep(10);
+  assert.equal(ev.none, 1);
+  assert.deepEqual(ev.http, []);
+  tr.dispose();
+});
+
+test("a plain empty result still gets its second opinion; Bengali/English pass through", async () => {
+  const a = make();
+  speak(a.tr, { voiced: 80 });
+  a.live.h.onFinal(1, "", "unknown");
+  await sleep(10);
+  assert.equal(a.ev.http.length, 1);
+  assert.deepEqual(a.ev.text, ["via http"]);
+  a.tr.dispose();
+
+  const b = make();
+  speak(b.tr);
+  b.live.h.onInterim(1, "Docker কী");
+  b.live.h.onFinal(1, "Docker কী?", "mixed");
+  await sleep(10);
+  assert.deepEqual(b.ev.interim.filter(Boolean), ["Docker কী"]);
+  assert.deepEqual(b.ev.text, ["Docker কী?"]);
+  b.tr.dispose();
+});
+
+test("the HTTP route drops foreign-script text too", async () => {
+  const { tr, live, ev } = make({ http: async () => ({ text: "你好，世界" }) });
+  live.usable = false;
+  speak(tr);
+  await sleep(10);
+  assert.deepEqual(ev.text, []);
+  assert.equal(ev.none, 1);
+  tr.dispose();
+});
