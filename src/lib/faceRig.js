@@ -193,20 +193,42 @@ function dataTexture(w, h, fill) {
   return tex;
 }
 
-/** Open mouth seen from the front: upper teeth, dark cavity, tongue, soft edge. */
-export function makeMouthTexture() {
-  return dataTexture(96, 48, (u, t) => {
-    // half-ellipse: full width along the mouth line (t = 0), narrowing to the bottom
+/** Lip colour for the rim of the open mouth: the model's own skin, redder and darker. */
+export function lipColor(skin) {
+  const base = skin || [0.8, 0.6, 0.52];
+  const c = [base[0] * 0.88, base[1] * 0.5, base[2] * 0.52];
+  c[0] = clamp(Math.max(c[0], c[1] + 0.14), 0.3, 0.8); // never grey: always visibly redder than green
+  return c;
+}
+
+/**
+ * Open mouth seen from the front: a soft lip rim, a clean band of upper teeth under a
+ * shadow, a warm cavity (never black — black reads as a dark smear on a light face) and a
+ * tongue. u = -1..1 across, t = 0 at the mouth line .. 1 at the bottom of the opening.
+ */
+export function makeMouthTexture(skin = null) {
+  const lip = lipColor(skin);
+  return dataTexture(160, 80, (u, t) => {
     const r = Math.sqrt(u * u + t * t);
-    const edge = sstep(1.0, 0.86, r);
+    const edge = sstep(1.0, 0.9, r);
     if (edge <= 0) return [0, 0, 0, 0];
-    const shade = 0.55 + 0.45 * sstep(1.0, 0.62, r); // darker towards the lips
-    let col = [0.1, 0.025, 0.03];
-    const tongue = sstep(0.42, 0.7, t) * sstep(0.85, 0.25, Math.abs(u));
-    col = col.map((c, i) => c * (1 - tongue) + [0.5, 0.15, 0.17][i] * tongue);
-    const teeth = sstep(0.15, 0.06, t) * sstep(0.78, 0.6, Math.abs(u));
-    col = col.map((c, i) => c * (1 - teeth) + [0.8, 0.76, 0.7][i] * teeth);
-    return [col[0] * shade, col[1] * shade, col[2] * shade, edge];
+    // cavity: deepest behind the teeth, warmer towards the bottom
+    let col = [0.19 + 0.1 * t, 0.045 + 0.03 * t, 0.05 + 0.03 * t];
+    // tongue: a soft rose mound in the lower middle
+    const tongue = sstep(0.38, 0.66, t) * sstep(0.8, 0.2, Math.abs(u));
+    col = col.map((c, i) => c * (1 - tongue * 0.85) + [0.6, 0.22, 0.24][i] * tongue * 0.85);
+    // upper teeth: a rounded band that follows the curve of the lip, soft top and bottom
+    const teethH = 0.3 * (1 - 0.45 * u * u);
+    const teeth = sstep(teethH + 0.05, teethH - 0.03, t) * sstep(0.84, 0.64, Math.abs(u));
+    const tooth = [0.9 - 0.07 * t / 0.3, 0.87 - 0.07 * t / 0.3, 0.81 - 0.07 * t / 0.3];
+    col = col.map((c, i) => c * (1 - teeth) + tooth[i] * teeth);
+    // the upper lip shades whatever is right below it
+    const under = 1 - 0.4 * sstep(0.14, 0.0, t);
+    col = col.map((c) => c * under);
+    // the lip rim: where the opening meets the lips
+    const rim = sstep(0.84, 0.96, r);
+    col = col.map((c, i) => c * (1 - rim) + lip[i] * rim);
+    return [col[0], col[1], col[2], edge];
   });
 }
 
@@ -599,7 +621,14 @@ export class FaceRig {
     if (!nativeMouth && this.skinMeshes.length) {
       const origin = new V3(ref.x, ref.y + lm.mouth.y, mouthZ);
       const geo = conformalPatch({ origin, halfW: lm.mouth.half, height: lm.jaw, nx: 12, ny: 5, rayTargets: skinRay, fallbackZ: mouthZ, lift: 0.0011 });
-      const tex = makeMouthTexture();
+      // the lips' colour comes from the model's own skin just beside / below the mouth
+      const lipSamples = [];
+      for (const [dx, dy] of [[-1.5 * lm.mouth.half, 0], [1.5 * lm.mouth.half, 0], [0, -0.85 * lm.jaw]]) {
+        const c = sampleSkin(surf(ref.x + dx, ref.y + lm.mouth.y + dy));
+        if (c) lipSamples.push(c);
+      }
+      const skinTone = lipSamples.length ? [0, 1, 2].map((k) => lipSamples.reduce((a, c) => a + c[k], 0) / lipSamples.length) : null;
+      const tex = makeMouthTexture(skinTone);
       const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
       const mesh = new THREE.Mesh(geo, mat);
       mesh.renderOrder = 6;
@@ -685,6 +714,8 @@ export class FaceRig {
       const vis = s.open > 0.04;
       mesh.visible = vis;
       if (vis) {
+        // fade the opening in instead of popping up as a thin dark line
+        mesh.material.opacity = clamp((s.open - 0.04) / 0.14, 0, 1);
         const sx = clamp(0.7 + 0.2 * s.open + 0.22 * s.wide - 0.3 * s.round + 0.12 * s.smile, 0.45, 1.15);
         setPivotScale(pivot, sx, s.open * 1.05, 1);
       }

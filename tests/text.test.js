@@ -132,6 +132,34 @@ test("CircuitBreaker: not_configured stays open for a long time", () => {
   t = 50000;
   assert.ok(!b.available());
 });
+test("CircuitBreaker: a quota answer (rate_limited) opens it at once for Retry-After, clamped", () => {
+  let t = 0;
+  const b = new CircuitBreaker({ failLimit: 5, quotaMinMs: 15_000, quotaMaxMs: 120_000, now: () => t });
+  b.failure({ code: "rate_limited", retryAfter: 30 });
+  assert.ok(!b.available());
+  t = 29_999;
+  assert.ok(!b.available());
+  t = 30_001;
+  assert.ok(b.available());
+  b.failure({ code: "rate_limited", retryAfter: 1 }); // too small: the floor applies
+  t += 14_000;
+  assert.ok(!b.available());
+  t += 1_500;
+  assert.ok(b.available());
+  b.failure({ code: "rate_limited", retryAfter: 99_999 }); // absurd: the ceiling applies
+  t += 119_000;
+  assert.ok(!b.available());
+  t += 2_000;
+  assert.ok(b.available());
+});
+test("CircuitBreaker: rate_limited without a Retry-After still opens for the floor", () => {
+  let t = 0;
+  const b = new CircuitBreaker({ quotaMinMs: 15_000, now: () => t });
+  b.failure({ code: "rate_limited" });
+  assert.ok(!b.available());
+  t = 15_001;
+  assert.ok(b.available());
+});
 test("Limiter never exceeds its concurrency and runs in FIFO order", async () => {
   const lim = new Limiter(2);
   let active = 0, peak = 0;

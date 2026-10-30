@@ -9,10 +9,19 @@
   of simultaneous TTS calls at the paid API / the per-IP rate limit.
 */
 export class CircuitBreaker {
-  constructor({ failLimit = 2, openMs = 60_000, hardOpenMs = 600_000, now = () => Date.now() } = {}) {
+  constructor({
+    failLimit = 2,
+    openMs = 60_000,
+    hardOpenMs = 600_000,
+    quotaMinMs = 15_000,
+    quotaMaxMs = 120_000,
+    now = () => Date.now(),
+  } = {}) {
     this.failLimit = failLimit;
     this.openMs = openMs;
     this.hardOpenMs = hardOpenMs;
+    this.quotaMinMs = quotaMinMs;
+    this.quotaMaxMs = quotaMaxMs;
     this.now = now;
     this.fails = 0;
     this.openUntil = 0;
@@ -27,10 +36,19 @@ export class CircuitBreaker {
     this.openUntil = 0;
   }
 
-  /** `err.code === "not_configured"` means retrying soon is pointless. */
+  /** `err.code === "not_configured"` means retrying soon is pointless. A quota answer
+   *  (`rate_limited`, with the server's `Retry-After`) opens the breaker AT ONCE for that
+   *  long: the server already knows the quota is spent, and asking again for the next
+   *  sentences only delays the device voice that is ready to speak. */
   failure(err) {
     if (err?.code === "not_configured") {
       this.openUntil = this.now() + this.hardOpenMs;
+      return;
+    }
+    if (err?.code === "rate_limited") {
+      const wait = Math.min(Math.max((err.retryAfter || 0) * 1000, this.quotaMinMs), this.quotaMaxMs);
+      this.openUntil = Math.max(this.openUntil, this.now() + wait);
+      this.fails = 0;
       return;
     }
     if (++this.fails >= this.failLimit) {

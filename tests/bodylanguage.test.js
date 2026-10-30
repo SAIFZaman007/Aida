@@ -320,7 +320,7 @@ test("rig: the Executive folds his hands while listening; others do not", () => 
     const { root } = makeHumanoid({});
     const ex = new AvatarRig(root, [], { id: "executive" });
     for (let i = 0; i < 90; i++) ex.update(1 / 30, { listening: true });
-    assert.ok(ex.arms.every((a) => a.state.kind === "clasp" && a.state.e > 0.9));
+    assert.ok(ex.arms.every((a) => a.state.kind === "fold" && a.state.e > 0.9));
     for (let i = 0; i < 90; i++) ex.update(1 / 30, {});
     assert.ok(ex.arms.every((a) => a.state.kind === "rest"));
 
@@ -348,6 +348,34 @@ test("rig: Security scans the room with his head while idle; Coder keeps still",
   const cod = range("coder");
   assert.ok(sec > 0.2, `security swept ${sec.toFixed(2)} rad`);
   assert.ok(cod < 0.12, `coder moved ${cod.toFixed(2)} rad`);
+});
+
+test("rig: the folded hands (Executive) meet without crossing through each other, right hand over left", () => {
+  const { root } = makeHumanoid({});
+  const rig = new AvatarRig(root, [], { id: "executive" });
+  for (const arm of rig.arms) arm.state = { kind: "fold", hold: "test", e: 1, amp: 1, jit: [0, 0, 0], phase: 0, t0: 0, dur: 1 };
+  rig._applyArms(0, 1, true);
+  const left = rig.arms.find((a) => a.name === "left");
+  const right = rig.arms.find((a) => a.name === "right");
+  const wl = left.hand.getWorldPosition(new THREE.Vector3());
+  const wr = right.hand.getWorldPosition(new THREE.Vector3());
+  // wrists stay on their own side of the body's midline (x = 0): no arm reaches across the other
+  assert.ok(wl.x > -0.02 && wr.x < 0.02, `wrists at x=${wl.x.toFixed(3)} / ${wr.x.toFixed(3)}`);
+  assert.ok(wr.y > wl.y, "the top (right) hand rests slightly higher than the left");
+  const fl = worldDir(left.fore, left.hand);
+  const fr = worldDir(right.fore, right.hand);
+  assert.ok(fl.z > 0.7 && fr.z > 0.7, "forearms point forward, not down at the belt");
+  assert.ok(fl.y > -0.2 && fr.y > -0.2, "forearms do not slope down");
+});
+
+test("rig: only the Executive uses the folded-hands pose (Security's clasp is unchanged)", () => {
+  const { root } = makeHumanoid({});
+  const sec = new AvatarRig(root, [], { id: "security" });
+  const kinds = sec.style.gestures.repertoire.map((g) => g.kind);
+  assert.ok(kinds.includes("clasp") && !kinds.includes("fold"));
+  const { root: r2 } = makeHumanoid({});
+  const ex = new AvatarRig(r2, [], { id: "executive" });
+  assert.equal(ex.style.listenPose, "fold");
 });
 
 test("rig: new poses point where they should", () => {

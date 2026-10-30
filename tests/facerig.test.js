@@ -125,3 +125,38 @@ test("an indexless skinned mesh works too", () => {
   const b = rayAt(0.01, 1.6).intersectObjects(proxy, false)[0];
   assert.ok(a && b && a.point.distanceTo(b.point) < 1e-5);
 });
+
+// ---- mouth interior (v2.5.1): no "dark smear", lips from the model's own skin
+import { lipColor as _lipColor, makeMouthTexture as _makeMouthTexture } from "../src/lib/faceRig.js";
+
+test("lipColor is always visibly redder than the skin it comes from, for light and dark skin", () => {
+  for (const skin of [[0.95, 0.8, 0.7], [0.55, 0.38, 0.3], [0.3, 0.2, 0.15], null]) {
+    const c = _lipColor(skin);
+    assert.ok(c[0] > c[1] + 0.1 && c[0] > c[2] + 0.1, `lip ${c.map((x) => x.toFixed(2))}`);
+    assert.ok(c.every((x) => x >= 0 && x <= 1));
+  }
+});
+
+test("mouth texture: transparent outside the opening, never black inside, teeth near the top", () => {
+  const tex = _makeMouthTexture([0.8, 0.6, 0.5]);
+  const { data, width: w, height: h } = tex.image;
+  const px = (u, t) => {
+    const c = Math.round(((u + 1) / 2) * (w - 1));
+    const r = Math.round((1 - t) * (h - 1)); // row 0 is the bottom of the picture (t = 1)
+    const o = (r * w + c) * 4;
+    return [data[o] / 255, data[o + 1] / 255, data[o + 2] / 255, data[o + 3] / 255];
+  };
+  assert.equal(px(0.95, 0.95)[3], 0, "outside the half-ellipse nothing is drawn");
+  let darkest = 1;
+  for (let t = 0.02; t < 0.7; t += 0.04) {
+    for (let u = -0.6; u <= 0.6; u += 0.1) {
+      const p = px(u, t);
+      if (p[3] > 0.95) darkest = Math.min(darkest, Math.max(p[0], p[1], p[2]));
+    }
+  }
+  assert.ok(darkest > 0.12, `the opening must not contain near-black pixels (darkest ${darkest.toFixed(2)})`);
+  const teeth = px(0, 0.1);
+  assert.ok(teeth[0] > 0.75 && teeth[1] > 0.7 && teeth[2] > 0.65, "a clean light band of upper teeth under the lip");
+  const cavity = px(0, 0.8);
+  assert.ok(cavity[0] > cavity[1] * 2, "the cavity and tongue are warm, not grey");
+});

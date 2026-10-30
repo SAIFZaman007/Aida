@@ -81,12 +81,12 @@ export const STYLES = {
         { kind: "beat", w: 2, hands: "right" },
         { kind: "palm", w: 2, hands: "either" },
         { kind: "open", w: 1.5, hands: "both" },
-        { kind: "clasp", w: 1.2, hands: "both" },
+        { kind: "fold", w: 1.2, hands: "both" },
         { kind: "point", w: 0.6, hands: "right" },
       ],
       firstDelay: [1.5, 3],
     },
-    listenPose: "clasp",
+    listenPose: "fold",
     head: { yaw: 0.8, pitch: 0.9, roll: 0.7, nod: 1 },
     body: { sway: 0.8, lean: 0 },
     face: { smile: 0.07, smileVar: 0.06, brow: 1 },
@@ -207,6 +207,7 @@ export const KINDS = {
   flourish: { pose: "flourish", sway: 0.8, freq: 3.4 },
   shrug: { pose: "shrug", sway: 0.5, freq: 3, lift: 0.3 },
   clasp: { pose: "clasp", sway: 0.25, freq: 2.4 },
+  fold: { pose: "fold", sway: 0.15, freq: 1.8 },
   chin: { pose: "chin", sway: 0.15, freq: 2 },
 };
 

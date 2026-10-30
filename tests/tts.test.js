@@ -82,7 +82,7 @@ const pcm = (n, samples = 4800) => {
 const codedError = (code) => Object.assign(new Error(code), { code });
 
 /** Fake API: sentence "… N." streams PCM tagged N. */
-function fakeApi({ delays = {}, fail = () => false, calls = [], samples = {}, hang = () => false, midFail = () => false } = {}) {
+function fakeApi({ delays = {}, fail = () => false, failWith = null, calls = [], samples = {}, hang = () => false, midFail = () => false } = {}) {
   return {
     calls,
     async speakStream(text, gender, { signal } = {}) {
@@ -94,7 +94,7 @@ function fakeApi({ delays = {}, fail = () => false, calls = [], samples = {}, ha
         const t = setTimeout(resolve, hang(n) ? 10_000 : (delays[n] ?? 1));
         signal?.addEventListener("abort", () => { clearTimeout(t); reject(new DOMException("aborted", "AbortError")); });
       });
-      if (fail(n)) throw codedError("unavailable");
+      if (fail(n)) throw failWith ? failWith() : codedError("unavailable");
       return {
         sampleRate: 24000,
         chunks: (async function* () {
@@ -264,6 +264,21 @@ test("circuit breaker: after repeated failures the cloud is not even called", as
   await idle(tts);
   assert.equal(api.calls.length, before, "cloud must not be called while the breaker is open");
   assert.equal(log.filter((l) => l.kind === "browser").length, 3, "every sentence still got spoken");
+});
+
+test("quota (429): the first refusal switches to the device voice at once; later sentences never wait for the cloud", async () => {
+  const api = fakeApi({ fail: () => true, failWith: () => Object.assign(codedError("rate_limited"), { retryAfter: 20, status: 429 }) });
+  const breaker = new CircuitBreaker();
+  const tts = await build({ api, breaker });
+  say(tts, 0, "First 1.");
+  await idle(tts);
+  assert.equal(api.calls.length, 1);
+  assert.ok(!breaker.available(), "one quota answer is enough to open the breaker");
+  for (let i = 1; i < 4; i++) say(tts, i, `Next ${i + 1}. `);
+  await idle(tts);
+  assert.equal(api.calls.length, 1, "no further cloud call while the quota pause lasts");
+  assert.equal(log.filter((l) => l.kind === "browser").length, 4, "every sentence was still spoken, by the device voice");
+  assert.equal(tts.notices.filter((n) => n.kind === "fallback").length, 1, "the person is told once");
 });
 
 test("provider 'webspeech' never touches the network", async () => {

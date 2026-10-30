@@ -168,6 +168,13 @@ export const POSES = {
   shrug: { upper: [0.28, -0.93, 0.18], fore: [0.42, 0.2, 0.88], hand: [0.4, 0.3, 0.86] },
   // hands together in front of the belt — professional, calm
   clasp: { upper: [0.1, -0.97, 0.2], fore: [-0.62, -0.28, 0.73], hand: [-0.75, -0.1, 0.65] },
+  // hands folded in front of the belt, the character's RIGHT hand resting over the left
+  // (`right` overrides the base for that arm): forearms rise a little toward the hands, the
+  // wrists stay almost straight, and the hands meet instead of crossing through each other.
+  fold: {
+    upper: [0.08, -0.95, 0.28], fore: [-0.52, -0.08, 0.85], hand: [-0.56, -0.1, 0.82],
+    right: { upper: [0.08, -0.94, 0.3], fore: [-0.57, -0.02, 0.82], hand: [-0.62, -0.06, 0.78] },
+  },
   // hand up to the chin — thinking
   chin: { upper: [0.1, -0.85, 0.5], fore: [-0.3, 0.72, 0.62], hand: [-0.25, 0.75, 0.6] },
 };
@@ -358,7 +365,8 @@ export class AvatarRig {
   _armTargets(arm, kind, e, t) {
     const rest = POSES.rest;
     const info = kindInfo(kind);
-    const g = POSES[info.pose] || POSES.rest;
+    const base = POSES[info.pose] || POSES.rest;
+    const g = (arm.side < 0 && base.right) || base; // a pose may give the right arm its own targets
     const st = arm.state;
     const ph = st.phase;
     const sway = e * 0.08 * (info.sway ?? 1);
