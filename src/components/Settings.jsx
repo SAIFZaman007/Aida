@@ -5,14 +5,14 @@ import { allAvatars } from "../lib/avatars.js";
 /*
   Settings — a clean, scalable preferences panel.
 
-  Grouped into Avatar & voice / Voice / Microphone / Conversation so new options
+  Grouped into Brain / Avatar & voice / Voice / Microphone / Conversation so new options
   slot in without redesigning anything. Every change writes through
   updateSettings(), which persists to localStorage immediately.
 
   The avatar is NOT chosen here: each mode has its own avatar (and its voice
   gender), so picking a mode on the main screen picks both.
 */
-export default function Settings({ open, onClose }) {
+export default function Settings({ open, onClose, model = "—", online = false }) {
   const s = useSettings();
   const [voices, setVoices] = useState([]);
   const [mics, setMics] = useState([]);
@@ -51,6 +51,19 @@ export default function Settings({ open, onClose }) {
             ✕
           </button>
         </div>
+
+        {/* The AI model in use (kept out of the top bar) */}
+        <section className="mb-6 space-y-3">
+          <p className="label">Brain</p>
+          <Row label="Model">
+            <span className="font-mono text-[12px] text-cyan">{model}</span>
+          </Row>
+          <Row label="Status">
+            <span className={"font-mono text-[12px] " + (online ? "text-cyan" : "text-steel")}>
+              {online ? "online" : "offline"}
+            </span>
+          </Row>
+        </section>
 
         {/* Avatar & voice follow the mode */}
         <section className="mb-6">

@@ -227,7 +227,7 @@ export default function App() {
             alt=""
             width={40}
             height={40}
-            className="h-10 w-10 rounded-xl shadow-glow"
+            className="h-10 w-10 rounded-md border border-cyan/30 object-cover shadow-glow"
             draggable={false}
           />
           <span className="font-hud text-2xl font-bold tracking-[0.3em] text-frost">A.I.D.A</span>
@@ -235,10 +235,7 @@ export default function App() {
         </div>
         <div className="flex items-center gap-5 font-mono text-[11px]">
           <span className="text-steel">
-            avatar<span className="ml-2 text-cyan">{avatar.label}</span>
-          </span>
-          <span className="text-steel">
-            brain<span className="ml-2 text-cyan">{status.model}</span>
+            Avatar &amp; Knowledge base :<span className="ml-2 text-cyan">{avatar.label}</span>
           </span>
           <span className="flex items-center gap-2">
             <span
@@ -409,7 +406,7 @@ export default function App() {
         </main>
       </div>
 
-      <Settings open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <Settings open={settingsOpen} onClose={() => setSettingsOpen(false)} model={status.model} online={status.online} />
       <Dialog state={dialog} onClose={() => setDialog(null)} />
     </div>
   );
