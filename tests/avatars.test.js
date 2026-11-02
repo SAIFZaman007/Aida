@@ -43,6 +43,35 @@ test("a mode is marked video-ready only when its files exist; the others keep th
   }
 });
 
+test("every mode now has its idle + talk clips, framed as 16:9 (wide) except Non-stop (9:16, tall)", () => {
+  assert.deepEqual([...VIDEO_READY].sort(), MODES.map(([id]) => id).sort());
+  for (const a of allAvatars()) {
+    assert.ok(a.video, `${a.id} has video`);
+    assert.equal(a.video.shape, a.id === "nonstop" ? "tall" : "wide", a.id);
+    assert.ok(a.video.focus >= 0 && a.video.focus <= 100, `${a.id} focus`);
+    for (const url of [a.video.idle, a.video.talk, a.video.poster]) assert.ok(existsSync(fileOf(url)), url);
+  }
+});
+
+test("Non-stop: tall idle clip, wide talk clip, each framed on its own; the others use one shape for both", () => {
+  const n = AVATARS.nonstop.video;
+  assert.equal(n.shape, "tall");
+  assert.equal(n.talkShape, "wide");
+  for (const a of allAvatars().filter((x) => x.id !== "nonstop")) {
+    assert.equal(a.video.talkShape, a.video.shape, a.id);
+    assert.equal(a.video.talkFocus, a.video.focus, a.id);
+  }
+});
+
+test("clips follow the <mode>-idle / -talk / -poster naming the encode script writes", () => {
+  for (const a of allAvatars()) {
+    const name = a.id === "nonstop" ? "non-stop" : a.id;
+    assert.match(a.video.idle, new RegExp(`/${name}-idle\\.mp4$`));
+    assert.match(a.video.talk, new RegExp(`/${name}-talk\\.mp4$`));
+    assert.match(a.video.poster, new RegExp(`/${name}-poster\\.jpg$`));
+  }
+});
+
 test("legacy and unknown personas still get an avatar", () => {
   assert.equal(avatarForPersona("developer").persona, "coder");
   assert.equal(avatarForPersona("ccna_trainer").persona, "researcher");

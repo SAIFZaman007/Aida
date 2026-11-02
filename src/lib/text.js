@@ -229,6 +229,36 @@ const REPEATED_CHAR_RE = /([^\p{Nd}\s])\1{2,}/gu;
 const REPEATED_WORD_RE = rx("\\b([A-Za-z0-9_]+)(?:<WS>+\\1\\b){2,}", "gi");
 const ACRONYM_RE = /\b[A-Z]{2,6}\b/g;
 
+// ---- The assistant's name (spoken as a word) --------------------------------
+// "A.I.D.A", "AIDA" and "Aida" are all the NAME Aida, not an abbreviation: spoken as the
+// word (written আইডা inside Bengali text so the Bengali voice says a word too).
+const NAME_RE = /\bA\.I\.D\.A\b|\bAIDA\b|\bAida\b/g;
+const SPOKEN_NAME = { en: "Aida", bn: "আইডা" };
+
+// ---- Contact details: spoken, not spelled -------------------------------------
+const EMAIL_RE = /\b[\w.+-]+@[\w-]+(?:\.[\w-]+)+\b/g;
+const DOMAIN_RE =
+  /(?:https?:\/\/)?(?:www\.)?([a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:com|org|net|io|ai|app|dev|co|info|edu|gov|bd))\b(?:\/(?!\w))?/gi;
+// digit groups of 3+ after the first ("+880 1897-669234"); dates ("2026-11-02") never match
+const PHONE_RE = /\+?\p{Nd}+(?:[ \-]\p{Nd}{3,})+/gu;
+const POSTAL_RE = /(Dhaka|ঢাকা)([\s\-–]+)(\p{Nd}{4})(?!\p{Nd})/gu;
+const ROAD_RE = /\bRd\b\.?/g;
+
+const dotWords = (address, language) => address.replaceAll(".", language === "en" ? " dot " : " ডট ");
+
+function speakEmail(match, language) {
+  const at = match.indexOf("@");
+  const local = match.slice(0, at);
+  const domain = match.slice(at + 1);
+  return `${dotWords(local, language)} ${SYMBOLS[language]["@"]} ${dotWords(domain, language)}`;
+}
+
+function speakPhone(match) {
+  const groups = match.match(/\p{Nd}+/gu) || [];
+  if (groups.reduce((n, g) => n + [...g].length, 0) < 9) return match; // e.g. "1 000 000"
+  return (match.startsWith("+") ? "+" : "") + groups.map((g) => [...g].join(" ")).join(", ");
+}
+
 function spellNumber(digits) {
   // Identifiers (phone numbers, IDs): leading zero or very long -> digit by digit.
   if (digits[0] === "0" || digits.length >= 11) return digits.split("").join(" ");
@@ -242,12 +272,19 @@ export function normalizeForSpeech(text, lang) {
   const language = lang || dominantLanguage(text);
   let t = text;
 
+  t = t.replace(NAME_RE, () => SPOKEN_NAME[language]);
+  t = t.replace(EMAIL_RE, (m) => speakEmail(m, language));
+  t = t.replace(DOMAIN_RE, (_, domain) => dotWords(domain, language));
+  t = t.replace(PHONE_RE, speakPhone);
+  t = t.replace(POSTAL_RE, (_, city, gap, code) => `${city}${gap}${[...code].join(" ")}`);
+
   t = t.replace(REPEATED_CHAR_RE, (_, ch) => ch);
   t = t.replace(REPEATED_WORD_RE, (_, w) => w);
 
   if (language === "en") {
     t = t.replace(ASCII_DIGIT_RUN_RE, (m) => spellNumber(m));
     for (const [re, repl] of ABBREV_MAP) t = t.replace(re, () => repl);
+    t = t.replace(ROAD_RE, () => "Road");
     t = t.replace(ACRONYM_RE, (m) => ACRONYM_WORDS.get(m) ?? m);
   }
 

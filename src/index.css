@@ -241,6 +241,19 @@ body.app-locked {
   height: 100%;
   object-fit: cover;
 }
+/* 16:9 clips: the office scene fills the whole screen; a screen of another shape crops the
+   sides (the person's position is set per clip with object-position, see avatars.js). */
+.stage-wide {
+  position: absolute;
+  inset: 0;
+}
+.stage-wide > * {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 /* A portrait screen (phone): the clip simply fills it. */
 @media (max-aspect-ratio: 9 / 16) {
   .stage-figure {
