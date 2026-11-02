@@ -56,10 +56,10 @@ export default function Dialog({ state, onClose }) {
               if (e.key === "Escape") onClose();
             }}
             placeholder={state.placeholder || ""}
-            className="w-full rounded-lg border border-line bg-void-700 px-3 py-2.5 font-mono text-[13px] text-frost placeholder:text-steel/50 focus:border-cyan/50 focus:outline-hidden"
+            className="w-full rounded-lg border border-line bg-void-700 px-3 py-2.5 font-sans text-[13px] text-frost placeholder:text-steel/50 focus:border-violet/50 focus:outline-hidden"
           />
         ) : (
-          <p className="font-mono text-[13px] leading-relaxed text-frost/80">
+          <p className="font-sans text-[13px] leading-relaxed text-frost/80">
             {state.message}
           </p>
         )}
@@ -77,7 +77,7 @@ export default function Dialog({ state, onClose }) {
               "rounded-lg border px-4 py-2 font-hud text-[12px] font-semibold uppercase tracking-wider transition " +
               (state.danger
                 ? "border-crimson/50 bg-crimson/15 text-crimson hover:bg-crimson/25"
-                : "border-cyan/40 bg-cyan/15 text-cyan hover:bg-cyan/25")
+                : "border-violet/40 bg-violet/15 text-violet hover:bg-violet/25")
             }
           >
             {state.confirmLabel || "OK"}

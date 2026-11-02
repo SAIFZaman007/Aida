@@ -47,7 +47,7 @@ export default function Settings({ open, onClose, model = "—", online = false 
       >
         <div className="mb-5 flex items-center justify-between">
           <h2 className="font-hud text-lg uppercase tracking-[0.25em] text-frost">Settings</h2>
-          <button onClick={onClose} className="text-steel hover:text-cyan">
+          <button onClick={onClose} className="text-steel hover:text-violet">
             ✕
           </button>
         </div>
@@ -56,10 +56,10 @@ export default function Settings({ open, onClose, model = "—", online = false 
         <section className="mb-6 space-y-3">
           <p className="label">Brain</p>
           <Row label="Model">
-            <span className="font-mono text-[12px] text-cyan">{model}</span>
+            <span className="font-sans text-[12px] text-violet">{model}</span>
           </Row>
           <Row label="Status">
-            <span className={"font-mono text-[12px] " + (online ? "text-cyan" : "text-steel")}>
+            <span className={"font-sans text-[12px] " + (online ? "text-violet" : "text-steel")}>
               {online ? "online" : "offline"}
             </span>
           </Row>
@@ -70,13 +70,13 @@ export default function Settings({ open, onClose, model = "—", online = false 
           <p className="label mb-2">Avatar &amp; voice</p>
           <div className="grid grid-cols-2 gap-x-4 gap-y-1">
             {allAvatars().map((a) => (
-              <div key={a.id} className="flex items-center justify-between font-mono text-[11px]">
+              <div key={a.id} className="flex items-center justify-between font-sans text-[11px]">
                 <span className="text-frost/80">{a.label}</span>
                 <span className="text-steel">{a.gender === "female" ? "female voice" : "male voice"}</span>
               </div>
             ))}
           </div>
-          <p className="mt-2 font-mono text-[10px] text-steel/60">
+          <p className="mt-2 font-sans text-[10px] text-steel/60">
             Each mode has its own avatar, and the voice changes with it. Choose the mode on the main
             screen; the avatar and voice switch automatically.
           </p>
@@ -97,7 +97,7 @@ export default function Settings({ open, onClose, model = "—", online = false 
               onClick={() => updateSettings({ syncText: !s.syncText })}
             />
           </Row>
-          <p className="font-mono text-[10px] text-steel/60">
+          <p className="font-sans text-[10px] text-steel/60">
             On: each sentence appears as it starts being read, then the next, until the reply is
             finished. Off: the text streams as fast as it is written.
           </p>
@@ -112,7 +112,7 @@ export default function Settings({ open, onClose, model = "—", online = false 
             </select>
           </Row>
           {s.ttsProvider === "webspeech" && !voices.some((v) => /^bn/i.test(v.lang)) && (
-            <p className="font-mono text-[10px] text-crimson/80">
+            <p className="font-sans text-[10px] text-crimson/80">
               No Bengali voice is installed on this device, so Bengali replies will not
               sound right with the browser engine. Choose the Gemini engine, or install a
               Bengali voice in your system settings.
@@ -132,7 +132,7 @@ export default function Settings({ open, onClose, model = "—", online = false 
               ))}
             </select>
           </Row>
-          <p className="font-mono text-[10px] text-steel/60">
+          <p className="font-sans text-[10px] text-steel/60">
             The browser voice is used when the engine is set to Browser, and as an automatic
             fallback if the Gemini voice is unavailable. Rate and pitch apply to it.
           </p>
@@ -190,7 +190,7 @@ export default function Settings({ open, onClose, model = "—", online = false 
               onClick={() => updateSettings({ voiceMode: !s.voiceMode })}
             />
           </Row>
-          <p className="font-mono text-[10px] text-steel/60">
+          <p className="font-sans text-[10px] text-steel/60">
             In voice mode AIDA listens continuously; speaking over the avatar stops it
             instantly. Headphones recommended to prevent echo.
           </p>
@@ -203,7 +203,7 @@ export default function Settings({ open, onClose, model = "—", online = false 
 function Row({ label, children }) {
   return (
     <div className="flex items-center justify-between gap-4">
-      <span className="font-mono text-[12px] text-frost/80">{label}</span>
+      <span className="font-sans text-[12px] text-frost/80">{label}</span>
       {children}
     </div>
   );
@@ -215,7 +215,7 @@ function Toggle({ on, onClick }) {
       onClick={onClick}
       className={
         "h-6 w-11 rounded-full border transition " +
-        (on ? "border-cyan/60 bg-cyan/30" : "border-line bg-void-700")
+        (on ? "border-violet/60 bg-violet/30" : "border-line bg-void-700")
       }
     >
       <span

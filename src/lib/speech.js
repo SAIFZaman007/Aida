@@ -9,5 +9,8 @@
 import { api } from "./api.js";
 import { TTS, speechBus, sanitizeForSpeech, normalizeForSpeech, pickVoice, resolveVoice } from "./ttsEngine.js";
 
+// Live microphone level (0..1) while hands-free voice is on; drawn by the waveform on the main screen.
+export const micBus = { level: 0 };
+
 export { speechBus, sanitizeForSpeech, normalizeForSpeech, pickVoice, resolveVoice };
 export const tts = new TTS({ api });

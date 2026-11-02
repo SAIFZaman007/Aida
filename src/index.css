@@ -1,31 +1,47 @@
 @import 'tailwindcss';
 
+/*
+  A.I.D.A design tokens.
+  Deep navy surfaces, ONE accent colour (violet) for everything interactive, and the
+  brand cyan kept only for the logo glow, the live waveform and "listening" signals.
+  (Component classes such as `bg-void-700` or `text-frost` keep their names; only the
+  values changed, so every screen follows the same palette.)
+*/
 @theme {
-  --color-void-600: #10202b;
-  --color-void-700: #0b141b;
-  --color-void-800: #070d12;
-  --color-void-900: #04070a;
+  --color-void-600: #1a1f48;
+  --color-void-700: #11153a;
+  --color-void-800: #0b0e29;
+  --color-void-900: #060818;
 
-  --color-glass: rgba(10, 22, 30, 0.55);
-  --color-line: rgba(56, 225, 255, 0.16);
+  --color-glass: rgba(14, 18, 46, 0.58);
+  --color-line: rgba(150, 140, 255, 0.2);
+
+  --color-violet: #8b7bff;
+  --color-violet-soft: #b5a9ff;
+  --color-violet-dim: #5b4bd6;
+  --color-violet-deep: #3b2fa0;
 
   --color-cyan: #38e1ff;
   --color-cyan-dim: #0e7490;
   --color-cyan-deep: #155e6e;
 
-  --color-crimson: #ff3b5c;
-  --color-frost: #d6f3ff;
-  --color-steel: #6b8a99;
+  --color-crimson: #ff5d7a;
+  --color-frost: #eef0ff;
+  --color-steel: #99a2c8;
 
-  --font-hud: 'Chakra Petch', 'Noto Sans Bengali', sans-serif;
-  --font-mono: 'IBM Plex Mono', 'Noto Sans Bengali', ui-monospace, monospace;
+  --font-sans: 'Inter', 'Noto Sans Bengali', ui-sans-serif, system-ui, sans-serif;
+  --font-hud: 'Inter', 'Noto Sans Bengali', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Noto Sans Bengali', monospace;
 
-  --shadow-glow: 0 0 24px rgba(56, 225, 255, 0.25);
-  --shadow-glowsoft: 0 0 60px rgba(56, 225, 255, 0.12);
+  --shadow-glow: 0 0 28px rgba(139, 123, 255, 0.32);
+  --shadow-glowsoft: 0 0 60px rgba(139, 123, 255, 0.16);
+  --shadow-glowcyan: 0 0 24px rgba(56, 225, 255, 0.28);
 
   --animate-ringspin: spin 24s linear infinite;
   --animate-ringrev: rev 18s linear infinite;
   --animate-rise: rise 0.5s ease-out both;
+  --animate-pulsering: pulsering 2.4s ease-out infinite;
+  --animate-floaty: floaty 7s ease-in-out infinite;
 
   @keyframes spin {
     to {
@@ -47,15 +63,31 @@
       transform: translateY(0);
     }
   }
+  @keyframes pulsering {
+    0% {
+      transform: scale(1);
+      opacity: 0.55;
+    }
+    100% {
+      transform: scale(1.7);
+      opacity: 0;
+    }
+  }
+  @keyframes floaty {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
 }
 
 /*
   The default border color has changed to `currentcolor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still
   looks the same as it did with Tailwind CSS v3.
-
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
 */
 @layer base {
   *,
@@ -68,26 +100,20 @@
 }
 
 @utility panel {
-  /* Glass panel with a hairline cyan edge. */
-  @apply rounded-xl border border-line bg-glass backdrop-blur-xs;
+  /* Glass panel with a hairline violet edge. */
+  @apply rounded-xl border border-line bg-glass backdrop-blur-md;
 }
 
 @utility brackets {
-  /* Decorative corner brackets — the signature HUD detail. */
+  /* Decorative corner brackets (Settings / dialogs). */
   position: relative;
-  &::before {
-    content: '';
-    position: absolute;
-    width: 14px;
-    height: 14px;
-    border-color: rgba(56, 225, 255, 0.6);
-  }
+  &::before,
   &::after {
     content: '';
     position: absolute;
     width: 14px;
     height: 14px;
-    border-color: rgba(56, 225, 255, 0.6);
+    border-color: rgba(139, 123, 255, 0.7);
   }
   &::before {
     top: -1px;
@@ -104,12 +130,27 @@
 }
 
 @utility label {
-  @apply font-hud text-[10px] uppercase tracking-[0.28em] text-cyan/70;
+  @apply font-hud text-[10px] font-semibold uppercase tracking-[0.24em] text-violet-soft/80;
 }
 
 @utility select {
   /* Form control used across the Settings panel. */
-  @apply rounded-md border border-line bg-void-700 px-2 py-1 font-mono text-[12px] text-frost focus:border-cyan/50 focus:outline-hidden;
+  @apply rounded-md border border-line bg-void-700 px-2 py-1 text-[12px] text-frost focus:border-violet/60 focus:outline-hidden;
+}
+
+@utility glass {
+  /* Floating surface used by the rails, the dock and the landing navbar. */
+  background: rgba(12, 16, 42, 0.55);
+  border: 1px solid rgba(150, 140, 255, 0.22);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+}
+
+@utility hide-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* Global styles: kept outside any @layer (as in the Tailwind v3 setup) so they keep their precedence. */
@@ -125,46 +166,19 @@ body,
 }
 
 body {
-  background-color: #04070a;
-  color: #d6f3ff;
-  font-family: 'IBM Plex Mono', 'Noto Sans Bengali', ui-monospace, monospace;
+  background-color: #060818;
+  color: #eef0ff;
+  font-family: 'Inter', 'Noto Sans Bengali', ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  overflow: hidden;
-  /* Atmosphere: cool radial glow + fine grid, NOT a flat fill. */
   background-image:
-    radial-gradient(
-      1200px 600px at 50% -10%,
-      rgba(56, 225, 255, 0.08),
-      transparent 60%
-    ),
-    radial-gradient(
-      800px 500px at 100% 100%,
-      rgba(255, 59, 92, 0.05),
-      transparent 60%
-    ),
-    linear-gradient(rgba(56, 225, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(56, 225, 255, 0.035) 1px, transparent 1px);
-  background-size:
-    auto,
-    auto,
-    38px 38px,
-    38px 38px;
+    radial-gradient(1100px 620px at 50% -12%, rgba(139, 123, 255, 0.16), transparent 62%),
+    radial-gradient(900px 560px at 100% 100%, rgba(56, 225, 255, 0.07), transparent 60%);
+  background-attachment: fixed;
 }
 
-/* Faint moving scanline overlay for that "live console" feel. */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    0deg,
-    rgba(255, 255, 255, 0.015) 0px,
-    rgba(255, 255, 255, 0.015) 1px,
-    transparent 2px,
-    transparent 4px
-  );
-  mix-blend-mode: overlay;
+/* The app is one fixed screen; the landing page scrolls (it sets .page-scroll on its root). */
+body.app-locked {
+  overflow: hidden;
 }
 
 ::-webkit-scrollbar {
@@ -172,11 +186,19 @@ body::after {
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(56, 225, 255, 0.25);
+  background: rgba(139, 123, 255, 0.3);
   border-radius: 99px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(56, 225, 255, 0.45);
+  background: rgba(139, 123, 255, 0.5);
+}
+
+/* Electron (frameless window): the top bar drags the window, its buttons do not. */
+.app-drag {
+  -webkit-app-region: drag;
+}
+.app-no-drag {
+  -webkit-app-region: no-drag;
 }
 
 @layer utilities {
@@ -193,20 +215,63 @@ body::after {
   .caret::after {
     content: '▋';
     margin-left: 2px;
-    color: #38e1ff;
+    color: #8b7bff;
     animation: blink 1s step-end infinite;
   }
 }
 
+/* ── Video avatar stage ─────────────────────────────────────────────────────────
+   The clips are portrait (9:16). The figure is as tall as the screen, centred, and its
+   left/right edges fade into the blurred backdrop, so a wide screen never shows a hard box. */
+.stage-figure {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  height: 100%;
+  aspect-ratio: 9 / 16;
+  transform: translateX(-50%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 22%, #000 78%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 22%, #000 78%, transparent 100%);
+}
+.stage-figure > * {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* A portrait screen (phone): the clip simply fills it. */
+@media (max-aspect-ratio: 9 / 16) {
+  .stage-figure {
+    left: 0;
+    width: 100%;
+    transform: none;
+    aspect-ratio: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}
+
 /* Real-Time Reading Progress Highlighter — the segment of the streaming
-   bubble currently being spoken by the avatar. Smooth color/background
-   transitions so the highlight glides forward rather than snapping. */
+   bubble currently being spoken by the avatar. */
 .reading-highlight {
-  background-color: rgba(56, 225, 255, 0.22);
-  color: #eafcff;
+  background-color: rgba(139, 123, 255, 0.28);
+  color: #ffffff;
   border-radius: 3px;
-  box-shadow: 0 0 0 1px rgba(56, 225, 255, 0.25);
+  box-shadow: 0 0 0 1px rgba(139, 123, 255, 0.3);
   padding: 0 1px;
   transition: background-color 160ms ease-out, box-shadow 160ms ease-out, color 160ms ease-out;
   scroll-margin-block: 96px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

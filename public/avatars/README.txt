@@ -1,25 +1,34 @@
-Avatars — one per mode
-======================
+Avatars — one per mode (video)
+==============================
 
-Each mode has its own avatar. Selecting a mode in the app switches to its avatar,
-and the voice changes with it (male / female).
+Each mode has its own avatar. Selecting a mode switches to its avatar, and the
+voice changes with it (male / female — see src/lib/avatars.js).
 
-File name -> mode (voice)
-  non-stop.glb    Non-stop    (male)
-  executive.glb   Executive   (male)
-  coder.glb       Coder       (male)
-  architect.glb   Architect   (male)
-  security.glb    Security    (male)
-  researcher.glb  Researcher  (male)
-  writer.glb      Writer      (female)
+  stills/<mode>.webp        portrait shown on the "Meet your AI specialists" cards
+                            (and on screen until that mode's videos are added)
+  video/<name>-idle.mp4     the avatar waiting: welcoming, smiling. Loops.
+  video/<name>-talk.mp4     the avatar speaking: lip movement, expressions. Loops
+                            while a reply is being read, then the idle clip returns.
+  video/<name>-poster.jpg   one frame of the idle clip (shown while the video loads)
 
-To replace an avatar: drop a new .glb here with the SAME file name. To change a
-voice gender or add a mode: edit src/lib/avatars.js (and src/lib/modes.js).
+  <name> = the mode id (coder, executive, architect, security, researcher, writer),
+  except Non-stop, which is "non-stop".
 
-What the app does with any humanoid model
-  - scales it to one common height and frames it head-and-torso
-  - gives it a relaxed professional posture (arms down, elbows slightly bent)
-  - adds breathing, head and eye movement, blinks and hand gestures while speaking
-  - animates the mouth from the real voice when the model has mouth morph targets
-Models are not modified on disk. If a file is missing or is not a valid .glb, the
-app shows an animated "AI core" instead and keeps working.
+Videos available now:  Non-stop.   The other six modes show their still image until
+their clips are added: put the three files above into video/ and add the mode id to
+VIDEO_READY in src/lib/avatars.js.
+
+Recommended encoding (what the Non-stop clips use)
+  - same framing, same position and same lighting in the idle and the talk clip, so
+    the switch between them is invisible
+  - portrait 9:16, 720 x 1280, 24 fps, H.264 (yuv420p), NO audio track (the voice
+    comes from the speech engine), `-movflags +faststart`, about 1-2 MB each
+  - the first and the last frame should match (or be cross-faded) so the loop has no jump
+      ffmpeg -i in.mp4 -vf "scale=720:1280,fps=24,format=yuv420p" -an \
+             -c:v libx264 -crf 25 -movflags +faststart out.mp4
+  - a landscape (16:9) version of a clip would fill a wide screen edge to edge; today
+    the portrait clip is centred and its sides blend into the background.
+
+Voice gender per mode (the person on screen and the voice must match):
+  Non-stop female · Executive female · Coder male · Architect male
+  Security male · Researcher female · Writer female

@@ -6,8 +6,9 @@
   The backend streams `sentence` events as the model writes. Each one is queued;
   the queue is consumed strictly in order and `onSentenceStart(index)` fires at the
   moment a sentence begins to be read, which is when the UI reveals its text. A
-  sentence arriving while nothing else is queued is revealed at once, so the first
-  words are on screen without waiting for audio.
+  sentence that arrives while nothing else is queued waits for its own voice too —
+  at most FIRST_REVEAL_HOLD_MS — so the first words and the first sound start
+  together instead of the text running seconds ahead of the voice.
 
   SPEED
    - STREAMING audio: each sentence is requested as a raw PCM stream
@@ -16,9 +17,9 @@
    - LOOK-AHEAD: while sentence N is being read, sentences N+1…N+3 are already
      downloading, and the player chains the next sentence onto the end of the
      previous one on the audio clock, so there is no gap between sentences.
-   - TEXT FOLLOWS THE VOICE: after the first sentence (shown at once), a sentence
-     is revealed when its audio STARTS — or after a short grace period when the
-     voice is slow, so a slow voice never freezes the text.
+   - TEXT FOLLOWS THE VOICE: a sentence is revealed when its audio STARTS — or after
+     a short grace period when the voice is slow (a little longer for the sentence
+     that opens a reply / follows a pause), so a slow voice never freezes the text.
    - FAST FAIL-OVER: no first audio within 11 s (or an error) → that sentence is
      spoken by the browser voice instead; two failures in a row open a circuit
      breaker that routes straight to the browser voice for a minute, then retries.
@@ -68,6 +69,7 @@ const FIRST_AUDIO_TIMEOUT_MS = 11_000; // the server itself fails over to the ba
 const IDLE_TIMEOUT_MS = 8_000; // silence in the middle of a clip
 const SLOW_NOTICE_MS = 4_500; // no first audio yet: tell the person the voice is slow
 const REVEAL_GRACE_MS = 1_200; // a sentence is shown this long after its turn even if its audio is late
+const FIRST_REVEAL_HOLD_MS = 3_500; // …for the sentence that starts a reply (nothing is being read yet)
 const BROWSER_START_MS = 2_500; // the browser voice must START speaking within this
 const LOOKAHEAD = 3; // sentences fetched ahead of the one being read
 const SEC_PER_CHAR = { en: 0.062, bn: 0.075 }; // starting estimate; learned from real clips
@@ -183,6 +185,7 @@ export class TTS {
       idle: IDLE_TIMEOUT_MS,
       slow: SLOW_NOTICE_MS,
       grace: REVEAL_GRACE_MS,
+      firstHold: FIRST_REVEAL_HOLD_MS,
       browserStart: BROWSER_START_MS,
       ...(timeouts || {}),
     };
@@ -287,8 +290,9 @@ export class TTS {
     }
     const clean = stripMarkdown(text);
     const silent = !!code || !hasSpeakable(clean); // e.g. a code fence, "---" or "..."
-    // Nothing ahead of it → show it right away; its audio follows within a moment.
-    if (this._pending === 0) this._reveal(index);
+    // Nothing ahead of it: it is shown with its own voice (see _playItem), which is requested
+    // right now — or at once when no cloud voice is involved.
+    const first = this._pending === 0;
     const reply = this._reply;
     const item = {
       index,
@@ -296,6 +300,7 @@ export class TTS {
       clean,
       lang: dominantLanguage(clean),
       silent,
+      first, // nothing was being read when it arrived
       clip: null,
       gender: reply.gender, // pinned for the whole reply
       avatar: reply.avatar,
@@ -391,7 +396,8 @@ export class TTS {
     if (item.clip) {
       // The text appears when the sound starts — or after a grace period when the voice
       // is slow, so a slow voice never freezes the text on screen.
-      const grace = setTimeout(() => this._reveal(item.index), this._timeouts.grace);
+      const hold = item.first ? this._timeouts.firstHold : this._timeouts.grace;
+      const grace = setTimeout(() => this._reveal(item.index), hold);
       try {
         await this._playClip(item, epoch, () => this._reveal(item.index));
         if (epoch !== this._epoch) return;

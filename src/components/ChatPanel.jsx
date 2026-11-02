@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../lib/api.js";
-import { tts, speechBus } from "../lib/speech.js";
+import { tts, speechBus, micBus } from "../lib/speech.js";
 import { VoiceController } from "../lib/voice.js";
 import { useSettings, updateSettings } from "../lib/settings.js";
 import { detectLanguage } from "../lib/text.js";
 import { LiveReply } from "../lib/liveReply.js";
 import { BRAND } from "../lib/brand.js";
+import { MicIcon, StopIcon } from "./icons.jsx";
 
 /*
   ChatPanel — text + real-time voice console.
@@ -27,7 +28,7 @@ import { BRAND } from "../lib/brand.js";
   PERFORMANCE: the in-progress reply renders in ONE small bubble, updated at most
   once per animation frame; finished replies are committed to `messages` once.
 */
-export default function ChatPanel({ conversation, avatar, onActivity }) {
+export default function ChatPanel({ conversation, avatar, onActivity, onNotice, visible = true, focusKey = 0, autoVoice = true }) {
   const settings = useSettings();
   const [messages, setMessages] = useState([]);
   const [streaming, setStreaming] = useState(null); // { text } while a reply is being produced / read
@@ -53,6 +54,7 @@ export default function ChatPanel({ conversation, avatar, onActivity }) {
   const liveRef = useRef(null); // LiveReply being produced / read, or null
   const rafRef = useRef(0);
   const scrollRef = useRef(null);
+  const inputRef = useRef(null);
   const markRef = useRef(null);
   const convRef = useRef(conversation);
   convRef.current = conversation;
@@ -111,8 +113,9 @@ export default function ChatPanel({ conversation, avatar, onActivity }) {
   }, [speaking, capturing, thinkingNow, onActivity]);
 
   // A Non-stop session means "keep listening": switch hands-free voice on.
+  // (Not when the session was opened only to type into: autoVoice is false then.)
   useEffect(() => {
-    if (conversation?.persona === "nonstop") updateSettings({ voiceMode: true });
+    if (autoVoice && conversation?.persona === "nonstop") updateSettings({ voiceMode: true });
   }, [conversation?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // While hands-free voice is on, keep the screen awake (a sleeping display or
@@ -160,7 +163,16 @@ export default function ChatPanel({ conversation, avatar, onActivity }) {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [messages, streaming, caption]);
+  }, [messages, streaming, caption, visible]);
+
+  // The chat rail can be collapsed (this panel stays mounted so the voice loop keeps running):
+  // its notices are forwarded to the main screen, and "open text chat" focuses the composer.
+  useEffect(() => {
+    onNotice?.(voiceNote);
+  }, [voiceNote]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (focusKey > 0 && visible) setTimeout(() => inputRef.current?.focus(), 60);
+  }, [focusKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-scroll the active highlight into view, smoothly, without yanking
   // the viewport when it's already visible.
@@ -332,6 +344,7 @@ export default function ChatPanel({ conversation, avatar, onActivity }) {
         onBargeIn: () => stopRef.current?.(),
         isSpeaking: () => speechBus.speaking,
         onLevel: ({ level, threshold }) => {
+          micBus.level = Math.min(1, level / Math.max(threshold * 2, 0.02));
           const el = meterRef.current;
           if (el) el.style.width = Math.min(100, (level / Math.max(threshold * 2, 0.02)) * 100) + "%";
         },
@@ -381,14 +394,16 @@ export default function ChatPanel({ conversation, avatar, onActivity }) {
 
   if (!conversation) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-5 px-6">
+      <div className="flex h-full flex-col items-center justify-center gap-5 px-6 text-center">
         <img
           src={BRAND.logo}
           alt="A.I.D.A — Artificial Intelligence · Desktop Assistant"
-          className="w-full max-w-[420px] select-none"
+          className="w-full max-w-[300px] select-none"
           draggable={false}
         />
-        <p className="font-mono text-sm text-steel">Select or create a conversation to begin.</p>
+        <p className="font-sans text-sm text-steel">
+          Open a session from History, or press the mic on the main screen to start talking.
+        </p>
       </div>
     );
   }
@@ -432,17 +447,17 @@ export default function ChatPanel({ conversation, avatar, onActivity }) {
 
       <div className="border-t border-line bg-void-900/60 px-4 py-3">
         {(listening || voiceNote.text) && (
-          <div className="mb-2 space-y-1 font-mono text-[10px] uppercase tracking-widest">
+          <div className="mb-2 space-y-1 font-sans text-[10px] uppercase tracking-widest">
             {listening && (
-              <div className="flex items-center gap-2 text-cyan">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-cyan" />
+              <div className="flex items-center gap-2 text-violet">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-violet" />
                 <span>{phase}</span>
                 <span
-                  className="h-1.5 w-28 overflow-hidden rounded-full bg-cyan/15"
+                  className="h-1.5 w-28 overflow-hidden rounded-full bg-violet/15"
                   title="Live microphone level"
                   aria-hidden="true"
                 >
-                  <span ref={meterRef} className="block h-full w-0 rounded-full bg-cyan" />
+                  <span ref={meterRef} className="block h-full w-0 rounded-full bg-violet" />
                 </span>
               </div>
             )}
@@ -463,13 +478,14 @@ export default function ChatPanel({ conversation, avatar, onActivity }) {
             className={
               "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border text-base transition " +
               (settings.voiceMode
-                ? "border-cyan bg-cyan/20 text-cyan"
-                : "border-line text-steel hover:border-cyan/50 hover:text-cyan")
+                ? "border-violet bg-violet/20 text-violet"
+                : "border-line text-steel hover:border-violet/50 hover:text-violet")
             }
           >
-            {settings.voiceMode ? "⏹" : "●"}
+            {settings.voiceMode ? <StopIcon size={18} /> : <MicIcon size={18} />}
           </button>
           <textarea
+            ref={inputRef}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
@@ -480,8 +496,9 @@ export default function ChatPanel({ conversation, avatar, onActivity }) {
               }
             }}
             rows={1}
-            placeholder="Transmit a message…  (Enter to send · Shift+Enter for newline)"
-            className="max-h-40 flex-1 resize-none rounded-lg border border-line bg-void-700 px-4 py-3 font-mono text-[13px] text-frost placeholder:text-steel/50 focus:border-cyan/50 focus:outline-hidden"
+            placeholder="Type a message…"
+            title="Enter to send · Shift+Enter for a new line"
+            className="max-h-40 flex-1 resize-none rounded-lg border border-line bg-void-700 px-4 py-3 font-sans text-[13px] text-frost placeholder:text-steel/50 focus:border-violet/50 focus:outline-hidden"
           />
           {canStop ? (
             <button
@@ -495,7 +512,7 @@ export default function ChatPanel({ conversation, avatar, onActivity }) {
             <button
               onClick={() => send(draft)}
               disabled={!draft.trim()}
-              className="h-11 shrink-0 rounded-lg border border-cyan/40 bg-cyan/15 px-5 font-hud text-sm font-semibold uppercase tracking-wider text-cyan transition hover:bg-cyan/25 disabled:opacity-25"
+              className="h-11 shrink-0 rounded-lg border border-violet/40 bg-violet/15 px-5 font-hud text-sm font-semibold uppercase tracking-wider text-violet transition hover:bg-violet/25 disabled:opacity-25"
             >
               Send
             </button>
@@ -540,9 +557,9 @@ function Bubble({ role, text, error, streaming, ghost, highlightRange, markRef }
         className={
           "max-w-[80%] whitespace-pre-wrap rounded-lg px-4 py-2.5 text-[13px] leading-relaxed " +
           (ghost
-            ? "border border-dashed border-cyan/40 bg-cyan/5 italic text-frost/80"
+            ? "border border-dashed border-violet/40 bg-violet/5 italic text-frost/80"
             : isUser
-              ? "border border-cyan/25 bg-cyan/5 text-frost"
+              ? "border border-violet/25 bg-violet/5 text-frost"
               : error
                 ? "border border-crimson/40 bg-crimson/5 text-crimson"
                 : "border border-line bg-void-700/70 text-frost")
@@ -551,7 +568,7 @@ function Bubble({ role, text, error, streaming, ghost, highlightRange, markRef }
         {!isUser && !error && <div className="label mb-1">aida</div>}
         {ghost && <div className="label mb-1 not-italic">listening…</div>}
         {streaming && !text ? (
-          <span className="animate-pulse font-mono text-xs text-steel">thinking…</span>
+          <span className="animate-pulse font-sans text-xs text-steel">thinking…</span>
         ) : (
           <span className={streaming || ghost ? "caret" : ""}>
             {highlightRange ? renderHighlighted(text, highlightRange, markRef) : text}

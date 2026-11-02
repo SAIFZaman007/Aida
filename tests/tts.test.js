@@ -140,24 +140,44 @@ test("sentences are PLAYED in order even when their audio arrives out of order",
   assert.deepEqual(log.filter((l) => l.kind === "cloud").map((l) => l.tag), [1, 2, 3]);
 });
 
-test("the loop: sentence 1 shows at once, every next one only when the previous was read", async () => {
+test("the loop: every sentence is shown with its own voice, the next one only when the previous was read", async () => {
   const tts = await build();
   say(tts, 0, "One 1. ");
-  assert.deepEqual(seq(), ["r0"], "first sentence is revealed on arrival, before any audio");
+  assert.deepEqual(seq(), [], "the first sentence waits for its voice (it is not shown seconds ahead of it)");
   say(tts, 1, "Two 2. ");
   say(tts, 2, "Three 3.");
-  assert.deepEqual(seq(), ["r0"], "later sentences wait for their turn");
+  assert.deepEqual(seq(), [], "later sentences wait for their turn");
   await idle(tts);
   assert.deepEqual(seq(), ["r0", "c1", "r1", "c2", "r2", "c3"]);
 });
 
-test("a sentence arriving after the queue emptied is revealed at once", async () => {
+test("the first sentence is shown the moment its voice starts, and never later than the hold when the voice is slow", async () => {
+  const api = fakeApi({ delays: { 1: 300 } });
+  const tts = await build({ api, timeouts: { firstHold: 60, slow: 5000, first: 3000 } });
+  say(tts, 0, "One 1. ");
+  assert.deepEqual(seq(), []);
+  await sleep(120);
+  assert.deepEqual(seq(), ["r0"], "after the hold the text appears even though the voice is still on its way");
+  assert.ok(!seq().includes("c1"));
+  await idle(tts, 4000);
+  assert.deepEqual(seq(), ["r0", "c1"]);
+});
+
+test("a sentence arriving after the queue emptied waits for its voice as well", async () => {
   const tts = await build();
   say(tts, 0, "One 1. ");
   await idle(tts);
   log.length = 0;
   say(tts, 1, "Two 2.");
-  assert.deepEqual(seq(), ["r1"]);
+  assert.deepEqual(seq(), []);
+  await idle(tts);
+  assert.deepEqual(seq(), ["r1", "c2"]);
+});
+
+test("without a cloud voice (device voice only) the first sentence is shown at once", async () => {
+  const tts = await build({ cfg: settings({ ttsProvider: "webspeech" }) });
+  say(tts, 0, "One 1. ");
+  assert.deepEqual(seq(), ["r0", "b"], "shown and spoken in the same breath: no cloud audio to wait for");
   await idle(tts);
 });
 

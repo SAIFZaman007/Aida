@@ -1,6 +1,6 @@
 // Electron main process.
 
-const { app, BrowserWindow, session } = require("electron");
+const { app, BrowserWindow, ipcMain, session } = require("electron");
 const path = require("path");
 
 const isDev = !!process.env.ELECTRON_START_URL;
@@ -13,13 +13,19 @@ const isDev = !!process.env.ELECTRON_START_URL;
 process.env.AIDA_API_URL =
   process.env.AIDA_API_URL || "http://127.0.0.1:8000/api";
 
+// The window has no native title bar: the app draws its own minimise / maximise / close
+// buttons (components/WindowControls.jsx). Set AIDA_NATIVE_FRAME=1 to get the native frame back.
+const customFrame = process.env.AIDA_NATIVE_FRAME !== "1";
+process.env.AIDA_CUSTOM_FRAME = customFrame ? "1" : "";
+
 function createWindow() {
   const win = new BrowserWindow({
+    frame: !customFrame,
     width: 1320,
     height: 860,
     minWidth: 980,
     minHeight: 640,
-    backgroundColor: "#04070a",
+    backgroundColor: "#060818",
     title: "A.I.D.A",
     // Window / taskbar icon (installers use build/icon.*; this covers dev runs and Linux).
     icon: path.join(__dirname, "..", "build", "icon.png"),
@@ -32,6 +38,11 @@ function createWindow() {
     },
   });
 
+  // Window buttons <-> the renderer (only the window that asked is touched).
+  const send = () => win.isDestroyed() || win.webContents.send("win:maximized", win.isMaximized());
+  win.on("maximize", send);
+  win.on("unmaximize", send);
+
   if (isDev) {
     win.loadURL(process.env.ELECTRON_START_URL);
     win.webContents.openDevTools({ mode: "detach" });
@@ -39,6 +50,15 @@ function createWindow() {
     win.loadFile(path.join(__dirname, "..", "dist", "index.html"));
   }
 }
+
+const fromEvent = (e) => BrowserWindow.fromWebContents(e.sender);
+ipcMain.on("win:minimize", (e) => fromEvent(e)?.minimize());
+ipcMain.on("win:toggle-maximize", (e) => {
+  const w = fromEvent(e);
+  if (w) (w.isMaximized() ? w.unmaximize() : w.maximize());
+});
+ipcMain.on("win:close", (e) => fromEvent(e)?.close());
+ipcMain.handle("win:is-maximized", (e) => !!fromEvent(e)?.isMaximized());
 
 app.whenReady().then(() => {
   const ses = session.defaultSession;

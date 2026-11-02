@@ -2,34 +2,55 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { AVATARS, avatarForPersona, allAvatars } from "../src/lib/avatars.js";
+import { AVATARS, VIDEO_READY, DEFAULT_PERSONA, avatarForPersona, allAvatars } from "../src/lib/avatars.js";
 import { MODES } from "../src/lib/modes.js";
 
-test("every mode has its own avatar file that exists in public/avatars", () => {
+const pub = (rel) => fileURLToPath(new URL(`../public/${rel}`, import.meta.url));
+// "./avatars/x" (page-relative url) -> public/avatars/x
+const fileOf = (url) => pub(url.replace(/^\.\//, ""));
+
+test("every mode has its own avatar with a still image that exists", () => {
   for (const [id] of MODES) {
     const a = avatarForPersona(id);
     assert.equal(a.persona, id);
-    const path = fileURLToPath(new URL(`../public/avatars/${a.file}`, import.meta.url));
-    assert.ok(existsSync(path), `${a.file} is missing`);
+    assert.ok(existsSync(fileOf(a.still)), `${a.still} is missing`);
   }
-  assert.equal(new Set(allAvatars().map((a) => a.file)).size, MODES.length);
+  assert.equal(new Set(allAvatars().map((a) => a.still)).size, MODES.length);
 });
 
-test("the avatar carries the voice gender; writer is the female voice", () => {
-  assert.equal(AVATARS.writer.gender, "female");
-  for (const id of ["nonstop", "executive", "coder", "architect", "security", "researcher"]) {
-    assert.equal(AVATARS[id].gender, "male");
-  }
+test("the voice gender matches the person on screen", () => {
+  for (const id of ["nonstop", "executive", "researcher", "writer"]) assert.equal(AVATARS[id].gender, "female", id);
+  for (const id of ["coder", "architect", "security"]) assert.equal(AVATARS[id].gender, "male", id);
   for (const a of allAvatars()) assert.ok(a.voiceHints.length > 3);
+});
+
+test("Non-stop is the default avatar and has its idle + talk videos", () => {
+  assert.equal(DEFAULT_PERSONA, "nonstop");
+  assert.ok(VIDEO_READY.includes("nonstop"));
+  const v = AVATARS.nonstop.video;
+  assert.ok(v, "Non-stop has video");
+  for (const url of [v.idle, v.talk, v.poster]) assert.ok(existsSync(fileOf(url)), `${url} is missing`);
+  assert.notEqual(v.idle, v.talk);
+});
+
+test("a mode is marked video-ready only when its files exist; the others keep the still", () => {
+  for (const a of allAvatars()) {
+    if (VIDEO_READY.includes(a.id)) {
+      for (const url of [a.video.idle, a.video.talk, a.video.poster]) assert.ok(existsSync(fileOf(url)), url);
+    } else {
+      assert.equal(a.video, null, `${a.id} has no video yet`);
+    }
+  }
 });
 
 test("legacy and unknown personas still get an avatar", () => {
   assert.equal(avatarForPersona("developer").persona, "coder");
   assert.equal(avatarForPersona("ccna_trainer").persona, "researcher");
-  assert.equal(avatarForPersona("whatever").persona, "executive");
-  assert.equal(avatarForPersona(undefined).persona, "executive");
+  assert.equal(avatarForPersona("whatever").persona, "nonstop");
+  assert.equal(avatarForPersona(undefined).persona, "nonstop");
 });
 
 test("urls are relative to the page so they work under nginx and Electron", () => {
-  assert.match(AVATARS.coder.url, /^\.\/avatars\/coder\.glb$/);
+  assert.match(AVATARS.coder.still, /^\.\/avatars\/stills\/coder\.webp$/);
+  assert.match(AVATARS.nonstop.video.idle, /^\.\/avatars\/video\/non-stop-idle\.mp4$/);
 });

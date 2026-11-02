@@ -29,3 +29,14 @@ export const MODE_HINT = {
   researcher: "Researcher — investigate questions and weigh the evidence.",
   writer: "Writer — draft and edit text in Bengali and English.",
 };
+
+// The short line under each mode's name on the "Meet your AI specialists" cards.
+export const MODE_TAGLINE = {
+  nonstop: "General AI Assistant",
+  executive: "Strategy & Management",
+  coder: "Programming & Development",
+  architect: "System Design & Architecture",
+  security: "Cybersecurity & Protection",
+  researcher: "Research & Analysis",
+  writer: "Content & Communication",
+};
