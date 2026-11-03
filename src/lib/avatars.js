@@ -13,10 +13,10 @@
              idle   the avatar waiting: welcoming, smiling (loops while nobody is talking)
              talk   the avatar speaking: lip movement, expressions (loops while a reply is read)
              poster a still frame of the idle clip (shown while the video loads)
-             shape  "wide" (16:9 office scene, fills the whole screen) or "tall" (9:16 portrait,
-                    centred and blended into a blurred backdrop) — of the idle clip
-             focus  wide clips only: where the person stands across the frame (0-100 %), so a
-                    window narrower than 16:9 crops the sides without cutting the person off
+             shape  "wide" (16:9 office scene) or "tall" (9:16 portrait) — of the idle clip. Either way
+                    the clip is shown in the same centred 9:16 frame (see figureX below)
+             focus  wide clips only: where the person stands across the 16:9 picture (0-100 %), so
+                    the 9:16 frame is cropped around the person
              talkShape / talkFocus   the same for the talk clip (default: same as the idle clip)
 
   ADD THE VIDEOS OF A MODE (no other code change):
@@ -55,6 +55,23 @@ const CLIPS = {
 function clipFrame(persona) {
   const c = CLIPS[persona] || { shape: "tall", focus: 50 };
   return { ...c, talkShape: c.talkShape ?? c.shape, talkFocus: c.talkFocus ?? c.focus };
+}
+
+/**
+ * Every avatar is shown in ONE fixed frame: a 9:16 portrait, as tall as the screen and centred
+ * (VideoStage). A 16:9 clip is cropped to that frame around the person; `focus` is where the
+ * person stands across the 16:9 picture (0-100 %). This turns it into the CSS object-position that
+ * puts the person exactly in the middle of the frame. A clip that is already 9:16 needs none (50).
+ *
+ * A 16:9 picture scaled to the frame's height is 256/81 (about 3.16) frames wide, so
+ *   position = (focus * 256/81 - 50) / (256/81 - 1)
+ */
+const WIDE_PER_FRAME = 256 / 81;
+export function figureX(focus, shape = "wide") {
+  if (shape !== "wide") return 50;
+  const f = Number.isFinite(focus) ? focus : 50;
+  const pos = (f * WIDE_PER_FRAME - 50) / (WIDE_PER_FRAME - 1);
+  return Math.round(Math.min(100, Math.max(0, pos)) * 10) / 10;
 }
 
 const fileName = (persona) => (persona === "nonstop" ? "non-stop" : persona);

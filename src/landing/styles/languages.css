@@ -1,0 +1,20 @@
+/* Languages: interactive live chat */
+.lang-toggle{position:relative;display:inline-flex;padding:4px;border-radius:999px;background:rgba(255,255,255,.04);box-shadow:0 0 0 1px var(--line) inset;margin-top:30px}
+.lang-toggle button{all:unset;cursor:pointer;padding:8px 18px;border-radius:999px;font-size:14px;color:var(--muted);transition:background .3s,color .3s,box-shadow .3s}
+.lang-toggle button:hover{color:#fff}
+.lang-toggle button.on{background:rgba(139,124,255,.2);color:var(--fg);box-shadow:0 0 0 1px rgba(139,124,255,.4) inset}
+.lang-toggle button.bn{font-family:var(--f-bn)}
+.lang-toggle button:focus-visible{outline:2px solid var(--violet-2);outline-offset:2px}
+.chat .msgs{height:380px;overflow:hidden;justify-content:flex-end}
+.chat .msg{animation:spin .45s cubic-bezier(.2,.8,.2,1) both;opacity:0;transform:translateY(10px)}
+.chat .msg.me .cur{display:inline-block;width:2px;height:1em;vertical-align:-2px;margin-left:2px;background:#fff;animation:pzBlink 1s steps(1) infinite}
+.chat .typing-dots{align-self:flex-start;display:flex;gap:4px;padding:12px 14px;border-radius:14px;background:#14162B;box-shadow:0 0 0 1px var(--line) inset;animation:spin .3s both;opacity:0}
+.chat .typing-dots i{width:6px;height:6px;border-radius:50%;background:var(--violet-2);animation:spdot 1s infinite}
+.chat .typing-dots i:nth-child(2){animation-delay:.15s}.chat .typing-dots i:nth-child(3){animation-delay:.3s}
+.chat:not(.talking) .speaking .bars i{transform:scaleY(.25)}
+.chat.talking .speaking .bars i{animation:flBar .9s ease-in-out infinite}
+.chat .speaking .bars i:nth-child(2n){animation-delay:.2s}.chat .speaking .bars i:nth-child(3n){animation-delay:.4s}
+.chat.listening .top .live{color:#9DE9F7}
+.chat .top .who{width:40px;height:40px;background-color:#1A1830;background-repeat:no-repeat;transition:box-shadow .3s}
+.chat.talking .top .who{box-shadow:0 0 0 1.5px var(--violet),0 0 0 5px rgba(139,124,255,.25)}
+@media (max-width:560px){.chat .msgs{height:340px}.lang-toggle button{padding:8px 14px}}

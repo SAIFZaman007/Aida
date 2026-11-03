@@ -1,0 +1,13 @@
+/* Maktech: marquee tags */
+.mak .split>div:first-child{display:flex;flex-direction:column;align-items:flex-start}
+.mak-rows{padding:12px 0 14px;-webkit-mask:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent);mask:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent)}
+.mak-row{animation:makMq 32s linear infinite;will-change:transform}
+.mak-row.s2{animation-direction:reverse;animation-duration:38s}
+.mak-row.s3{animation-duration:28s}
+.mak-rows:hover .mak-row{animation-play-state:paused}
+.mak-row span{transition:transform .3s,box-shadow .3s,color .3s}
+.mak-row span:hover{transform:translateY(-3px);color:#fff;box-shadow:0 0 0 1px rgba(139,124,255,.6) inset,0 10px 24px -10px rgba(139,124,255,.8)}
+.mak-row span i{animation:makDot 2.4s ease-in-out infinite}
+@keyframes makMq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes makDot{0%,100%{opacity:.5;box-shadow:none}50%{opacity:1;box-shadow:0 0 8px var(--violet)}}
+@media (prefers-reduced-motion:reduce){.mak-row{animation:none}}

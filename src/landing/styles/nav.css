@@ -1,0 +1,33 @@
+/* Glass sticky nav */
+.topnav{position:sticky;top:0;z-index:50;padding:16px 0;margin-bottom:-96px}
+.admin-bar .topnav{top:32px}
+.topnav-wrap{padding:0 max(16px,1.6vw)}
+.topnav .bar{position:relative;max-width:1856px;margin:0 auto;padding:0 20px;height:64px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;border-radius:20px;overflow:hidden;
+  background:linear-gradient(135deg,rgba(255,255,255,.10) 0%,rgba(255,255,255,.035) 45%,rgba(139,124,255,.06) 100%);
+  backdrop-filter:blur(22px) saturate(170%);-webkit-backdrop-filter:blur(22px) saturate(170%);
+  box-shadow:0 0 0 .5px rgba(255,255,255,.09)}
+.topnav .bar::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(60% 120% at 50% -40%,rgba(179,168,255,.14),transparent 60%)}
+.topnav .bar::after{content:"";position:absolute;top:0;left:-30%;width:30%;height:100%;pointer-events:none;background:linear-gradient(100deg,transparent,rgba(255,255,255,.07),transparent);animation:navshine 9s ease-in-out infinite}
+@keyframes navshine{0%,70%{left:-30%}100%{left:130%}}
+.topnav .bar>*{position:relative;z-index:1}
+.topnav.scrolled .bar{background:linear-gradient(135deg,rgba(20,20,45,.55),rgba(10,11,28,.45))}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.topnav .bar{background:rgba(12,13,30,.92)}}
+.topnav .tb{display:flex;align-items:center;gap:14px;justify-self:start}
+.topnav .tb .lg{width:40px;height:40px;border-radius:11px;overflow:hidden;background:#000;box-shadow:0 0 0 1px rgba(95,212,236,.35),0 0 18px -4px rgba(95,212,236,.6)}
+.topnav .tb b{font-family:var(--f-display);font-size:19px;font-weight:600;letter-spacing:.32em;color:#fff}
+.topnav .tl{display:flex;gap:4px;justify-self:center}
+.topnav .tl a{padding:8px 16px;border-radius:10px;font-size:14.5px;font-weight:500;color:#C9CBDD;transition:background .25s,color .25s}
+.topnav .tl a:hover{color:#fff;background:rgba(255,255,255,.07)}
+.topnav .tl a.on{color:#fff;background:rgba(255,255,255,.08)}
+.topnav .tc{justify-self:end;display:inline-flex;align-items:center;height:42px;padding:0 20px;border-radius:12px;color:#05060E;font-size:14px;font-weight:600;background:linear-gradient(180deg,#fff,#E4E1FF);box-shadow:inset 0 1px 0 #fff,0 8px 24px -8px rgba(179,168,255,.7);transition:transform .2s,background .2s}
+.topnav .tc:hover{transform:translateY(-1px);background:#fff}
+.topnav .tc:focus-visible,.topnav .tl a:focus-visible{outline:2px solid var(--violet-2);outline-offset:3px}
+html{scroll-behavior:smooth}
+section[id]{scroll-margin-top:110px}
+.mark{overflow:hidden;background:#000}
+[data-logo] img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
+@media (max-width:782px){.admin-bar .topnav{top:46px}}
+@media (max-width:900px){.topnav .tl{display:none}.topnav .bar{grid-template-columns:1fr auto}}
+@media (max-width:560px){.topnav{margin-bottom:-90px}.topnav .bar{border-radius:16px;height:56px;padding:0 12px}.topnav .tb .lg{width:34px;height:34px}}
+@media (max-width:420px){.topnav .tb b{font-size:16px;letter-spacing:.24em}.topnav .tc{padding:0 14px;font-size:13px}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.topnav .bar::after{display:none}}

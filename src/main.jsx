@@ -1,6 +1,5 @@
 import React, { lazy, Suspense } from "react";
 import ReactDOM from "react-dom/client";
-import "./index.css";
 
 /*
   Two screens, one bundle:
@@ -14,11 +13,11 @@ const desktop = typeof window !== "undefined" && !!window.avatar;
 const path = window.location.pathname.replace(/\/+$/, "") || "/";
 const showApp = desktop || path === "/app";
 
-const Screen = showApp ? lazy(() => import("./App.jsx")) : lazy(() => import("./landing/Landing.jsx"));
+const Screen = showApp ? lazy(() => import("./AppScreen.jsx")) : lazy(() => import("./landing/Landing.jsx"));
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <Suspense fallback={<div className="h-screen w-screen bg-void-900" />}>
+    <Suspense fallback={<div style={{ height: "100vh", width: "100vw", background: showApp ? "#060818" : "#05060E" }} />}>
       <Screen />
     </Suspense>
   </React.StrictMode>,

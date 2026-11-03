@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { AVATARS, VIDEO_READY, DEFAULT_PERSONA, avatarForPersona, allAvatars } from "../src/lib/avatars.js";
+import { AVATARS, VIDEO_READY, DEFAULT_PERSONA, avatarForPersona, allAvatars, figureX } from "../src/lib/avatars.js";
 import { MODES } from "../src/lib/modes.js";
 
 const pub = (rel) => fileURLToPath(new URL(`../public/${rel}`, import.meta.url));
@@ -82,4 +82,43 @@ test("legacy and unknown personas still get an avatar", () => {
 test("urls are relative to the page so they work under nginx and Electron", () => {
   assert.match(AVATARS.coder.still, /^\.\/avatars\/stills\/coder\.webp$/);
   assert.match(AVATARS.nonstop.video.idle, /^\.\/avatars\/video\/non-stop-idle\.mp4$/);
+});
+
+// ── One 9:16 frame for every avatar ───────────────────────────────────────────────
+test("figureX centres the person: a 9:16 frame cropped from a 16:9 picture", () => {
+  // The 16:9 picture scaled to the frame's height is 256/81 frames wide. With the CSS
+  // object-position p, the point at fraction f of the picture lands at frame x = (C-I)p + f*I
+  // (C = frame width, I = picture width); it must be the frame's middle for every avatar.
+  const I = 256 / 81; // in frame widths
+  for (const a of allAvatars()) {
+    for (const [shape, focus] of [[a.video.shape, a.video.focus], [a.video.talkShape, a.video.talkFocus]]) {
+      if (shape !== "wide") continue;
+      const p = figureX(focus, shape) / 100;
+      const where = (1 - I) * p + (focus / 100) * I;
+      assert.ok(Math.abs(where - 0.5) < 0.005, `${a.id}: person at ${where} of the frame, expected 0.5`);
+    }
+  }
+});
+
+test("figureX: a 9:16 clip needs no cropping; bad input stays inside 0-100", () => {
+  assert.equal(figureX(30, "tall"), 50);
+  assert.equal(figureX(undefined, "tall"), 50);
+  assert.equal(figureX(50, "wide"), 50);
+  assert.equal(figureX(0, "wide"), 0);
+  assert.equal(figureX(100, "wide"), 100);
+  assert.equal(figureX(NaN, "wide"), 50);
+  assert.equal(figureX(undefined), 50);
+});
+
+test("the stage shows EVERY clip, idle and talk, in the one centred 9:16 frame", () => {
+  const stage = readFileSync(fileURLToPath(new URL("../src/components/VideoStage.jsx", import.meta.url)), "utf8");
+  const css = readFileSync(fileURLToPath(new URL("../src/index.css", import.meta.url)), "utf8");
+  assert.ok(!/stage-wide/.test(stage + css), "no full-bleed 16:9 mode any more");
+  assert.equal((stage.match(/className="stage-figure"/g) || []).length, 1, "one frame holds both clips");
+  assert.match(css, /\.stage-figure \{[^}]*aspect-ratio: 9 \/ 16;/);
+  assert.match(css, /\.stage-figure \{[^}]*left: 50%;[^}]*height: 100%;/);
+  // 9:16 at a 954 px tall window is 536 px wide (the 534 x 954 frame asked for)
+  assert.ok(Math.abs(954 * 9 / 16 - 534) <= 3);
+  // the blurred picture behind it is always the avatar's own poster
+  assert.match(stage, /src=\{video\.poster\}/);
 });

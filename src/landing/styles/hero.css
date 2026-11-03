@@ -1,0 +1,42 @@
+/* Hero: copy + specialist card fan */
+.hero{padding-top:180px}
+.hero-meta .soon-chip{padding:3px 10px 3px 8px;border-radius:999px;background:rgba(139,124,255,.1);box-shadow:inset 0 0 0 1px rgba(139,124,255,.3);color:#C9C2FF}
+.hero-copy>*{animation:heroIn .9s cubic-bezier(.2,.8,.2,1) both}
+.hero-copy>.pill{animation-delay:.05s}.hero-copy>h1{animation-delay:.12s}.hero-copy>.hero-sub{animation-delay:.22s}.hero-copy>.hero-cta{animation-delay:.3s}.hero-copy>.hero-meta{animation-delay:.38s}
+.hstage{position:relative;margin-top:64px;padding-bottom:60px;animation:heroIn 1s cubic-bezier(.2,.8,.2,1) .45s both}
+html.ap-lock .hero-copy>*,html.ap-lock .hstage{animation-play-state:paused}
+@keyframes heroIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.horizon{position:absolute;left:50%;top:120px;width:1700px;height:900px;transform:translateX(-50%);border-radius:50%;pointer-events:none;border-top:1px solid rgba(179,168,255,.55);background:radial-gradient(50% 40% at 50% 0%,rgba(139,124,255,.30),rgba(95,212,236,.06) 50%,transparent 75%)}
+.harc{position:relative;max-width:1500px;margin:0 auto;height:600px}
+.harc::after{content:"";position:absolute;left:50%;top:290px;width:360px;height:120px;transform:translateX(-50%);background:radial-gradient(50% 50% at 50% 50%,rgba(139,124,255,.55),transparent 70%);filter:blur(18px);pointer-events:none;z-index:0}
+.hcard{all:unset;box-sizing:border-box;position:absolute;left:50%;top:0;width:230px;height:330px;border-radius:24px;overflow:hidden;cursor:pointer;background:#0D0E20;
+  box-shadow:0 0 0 1px rgba(255,255,255,.09) inset,0 30px 60px -24px rgba(0,0,0,.85);transform-origin:50% 100%;
+  transition:transform .8s cubic-bezier(.2,.8,.2,1),opacity .5s,box-shadow .4s,filter .5s;filter:saturate(.85) brightness(.82)}
+.hcard:focus-visible{outline:2px solid var(--violet-2);outline-offset:4px}
+.hcard video{opacity:0;transition:opacity .5s}
+.hcard video.ready{opacity:1}
+.hcard .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,6,14,0) 40%,rgba(5,6,14,.55) 65%,rgba(5,6,14,.95) 100%),linear-gradient(180deg,rgba(139,124,255,.10),transparent 40%)}
+.hcard .meta{position:absolute;left:14px;right:12px;bottom:14px;display:flex;gap:11px;align-items:center;z-index:2}
+.hcard .meta .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none;color:#D9D4FF;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);backdrop-filter:blur(8px)}
+.hcard .meta .ic svg{width:16px;height:16px}
+.hcard .meta b{display:block;font-family:var(--f-display);font-size:19px;font-weight:600;line-height:1.15;color:#fff}
+.hcard .meta small{display:block;font-size:12.5px;color:#B9BBD0;line-height:1.3;margin-top:2px}
+.hcard .hstate{position:absolute;left:12px;top:12px;z-index:2;font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em;padding:5px 9px;border-radius:999px;background:rgba(5,6,14,.6);color:var(--violet-2);backdrop-filter:blur(6px);box-shadow:inset 0 0 0 1px rgba(179,168,255,.3);opacity:0;transition:opacity .3s}
+.hcard.on{filter:none;box-shadow:0 0 0 1.5px var(--violet) inset,0 0 0 6px rgba(139,124,255,.10),0 40px 90px -20px rgba(124,108,255,.75)}
+.hcard.on .hstate{opacity:1}
+.hcard.on .meta .ic{background:var(--violet);color:#fff;box-shadow:none}
+.hcard.talk .hstate{color:#fff;background:rgba(139,124,255,.75)}
+.hcard:not(.on):hover{filter:saturate(1) brightness(1)}
+.hdet{position:relative;z-index:3;margin-top:-10px;opacity:0;transform:translateY(10px);transition:opacity .45s,transform .45s}
+.hdet.in{opacity:1;transform:none}
+@media (max-width:900px){.hcard{width:200px;height:290px}.harc::after{top:250px}.hstage{margin-top:44px}}
+@media (max-width:560px){
+  .hero{padding-top:150px}
+  .hero h1{font-size:clamp(38px,11vw,46px)}
+  .hero-meta{gap:10px 16px}
+  .hcard{width:170px;height:250px}.hcard .meta b{font-size:16px}.hcard .meta small{font-size:11px}
+  .hdet{margin-top:6px}
+}
+@media (prefers-reduced-motion:reduce){.hcard{transition:none}.hero-copy>*,.hstage{animation:none}}
+.detail h3{flex-wrap:wrap;row-gap:8px}
+@media (max-width:560px){.detail h3{font-size:26px}}

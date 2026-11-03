@@ -1,0 +1,263 @@
+/*
+  PREMIUM LAYER — everything that differs from the reference landing design lives here, so the
+  reference stylesheets (base, nav, hero, …) stay exactly as designed and this file is the only
+  place to tune the golden look:
+    1  gold tokens
+    2  navbar: full name, solid top mask, floating glass
+    3  floating buttons with a golden-lining hover
+    4  flat icons with a golden lining
+    5  golden linings on cards and chips
+    6  hero / orb bubble / Maktech link / eyebrows / progress
+    7  premium footer
+*/
+
+/* ───────────────────────── 1 · gold tokens ───────────────────────── */
+:root{
+  --gold:#E6C06A;
+  --gold-2:#F7E3A6;
+  --gold-3:#B98A34;
+  --gold-line:linear-gradient(135deg,#FFF1C4 0%,#E2B25A 28%,#9B6E22 52%,#E9C56F 76%,#FFF1C4 100%);
+  --gold-glow:rgba(230,192,106,.38);
+  /* the reference uses --line-2 for every card / chip outline: one token turns them all golden */
+  --line-2:rgba(230,192,106,.26);
+}
+
+/* ───────────────────────── 2 · navbar ───────────────────────── */
+/* Nothing may show in the strip between the browser's top edge and the floating bar:
+   a solid strip (same colour as the page) sits behind the glass once the page has scrolled. */
+.topnav::before{content:"";position:absolute;left:0;right:0;top:0;height:30px;pointer-events:none;opacity:0;transition:opacity .25s;
+  background:linear-gradient(180deg,var(--ink) 0,var(--ink) 17px,rgba(5,6,14,0) 100%)}
+.topnav.scrolled::before{opacity:1}
+/* floating glass: its shadow may leave the bar, so the bar no longer clips (the shine clips itself) */
+.topnav .bar{overflow:visible;box-shadow:0 0 0 1px rgba(230,192,106,.20),0 18px 44px -18px rgba(0,0,0,.85),0 1px 0 rgba(255,255,255,.07) inset}
+.topnav.scrolled .bar{box-shadow:0 0 0 1px rgba(230,192,106,.30),0 22px 50px -18px rgba(0,0,0,.9),0 1px 0 rgba(255,255,255,.06) inset}
+.topnav .bar::before{border-radius:inherit}
+.topnav .bar::after{left:0;width:100%;border-radius:inherit;
+  background:linear-gradient(100deg,transparent 38%,rgba(247,227,166,.10) 50%,transparent 62%) 130% 0/300% 100% no-repeat;
+  animation:navshine2 9s ease-in-out infinite}
+@keyframes navshine2{0%,70%{background-position:130% 0}100%{background-position:-30% 0}}
+
+/* brand lockup: emblem + A.I.D.A over a gold rule and the full name */
+.topnav .tb .lg{border-radius:12px;box-shadow:0 0 0 1px rgba(230,192,106,.6),0 0 0 4px rgba(230,192,106,.08),0 0 20px -4px rgba(230,192,106,.45)}
+.tbt{display:flex;flex-direction:column;gap:5px;line-height:1;min-width:0}
+.topnav .tb b{font-size:18px;line-height:1}
+.tbt small{position:relative;display:block;padding-top:5px;white-space:nowrap;font-family:var(--f-mono);font-size:8.5px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;
+  background:linear-gradient(90deg,#F7E3A6,#E2B25A 55%,#B98A34);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tbt small::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,rgba(247,227,166,.9),rgba(226,178,90,.35) 70%,transparent)}
+@media (max-width:1240px){.tbt small{display:none}.tbt{gap:0}.topnav .tb b{font-size:19px}}
+
+/* nav links: a gold line draws under the hovered / current section */
+.topnav .tl a{position:relative}
+.topnav .tl a::after{content:"";position:absolute;left:16px;right:16px;bottom:3px;height:1px;background:var(--gold-line);transform:scaleX(0);transform-origin:50% 50%;transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.topnav .tl a:hover::after,.topnav .tl a.on::after{transform:scaleX(1)}
+.topnav .tl a.on{box-shadow:0 0 0 1px rgba(230,192,106,.22) inset}
+
+/* the Launch button floats above the bar */
+.topnav .tc{position:relative;border-radius:13px;
+  box-shadow:inset 0 1px 0 #fff,0 0 0 1px rgba(230,192,106,.35),0 2px 4px rgba(0,0,0,.45),0 12px 26px -8px rgba(179,168,255,.7),0 22px 36px -16px rgba(0,0,0,.8);
+  transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s,background .35s;animation:btnFloat 5.5s ease-in-out infinite}
+.topnav .tc:hover{transform:translateY(-3px);background:#fff;
+  box-shadow:inset 0 1px 0 #fff,0 0 0 1px rgba(247,227,166,.9),0 0 0 4px rgba(230,192,106,.16),0 18px 34px -8px var(--gold-glow),0 28px 40px -16px rgba(0,0,0,.8)}
+@media (max-width:420px){.topnav .tb b{font-size:16px}}
+
+/* ───────────────────────── 3 · floating buttons ───────────────────────── */
+@keyframes btnFloat{0%,100%{translate:0 0}50%{translate:0 -3px}}
+.btn{position:relative;isolation:isolate;transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s,background .35s,color .35s}
+.btn-primary{
+  box-shadow:0 0 0 1px rgba(255,255,255,.16) inset,0 2px 4px rgba(0,0,0,.4),0 14px 30px -10px rgba(124,108,255,.75),0 26px 44px -22px rgba(0,0,0,.85)}
+.btn-ghost{background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.02));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  box-shadow:0 0 0 1px var(--line-2) inset,0 2px 4px rgba(0,0,0,.35),0 16px 30px -14px rgba(0,0,0,.9)}
+.hero-cta .btn-primary,.fcta{animation:btnFloat 5.5s ease-in-out infinite}
+/* the golden lining: a gold ring that draws itself around the button on hover / focus */
+.btn::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;z-index:2;pointer-events:none;opacity:0;transition:opacity .35s;
+  background:conic-gradient(from var(--ang),#8A6119,#FFF1C4,#E2B25A,#8A6119,#FFF1C4,#E2B25A,#8A6119);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.btn:hover,.btn:focus-visible{transform:translateY(-3px)}
+.btn:hover::before,.btn:focus-visible::before{opacity:1;animation:angSpin 3.4s linear infinite}
+.btn-primary:hover{box-shadow:0 0 0 1px rgba(255,255,255,.2) inset,0 2px 4px rgba(0,0,0,.4),0 20px 40px -10px var(--gold-glow),0 30px 50px -22px rgba(0,0,0,.85)}
+.btn-ghost:hover{background:linear-gradient(180deg,rgba(247,227,166,.12),rgba(255,255,255,.03));
+  box-shadow:0 0 0 1px rgba(230,192,106,.5) inset,0 2px 4px rgba(0,0,0,.35),0 20px 36px -12px var(--gold-glow)}
+.btn:focus-visible{outline:2px solid var(--gold);outline-offset:4px}
+/* "coming soon" is not a button: no lift, no ring */
+.btn-soon:hover,.btn-soon:focus-visible{transform:none}
+.btn-soon::before{display:none}
+.btn-soon:hover{box-shadow:0 0 0 1px var(--line-2) inset,0 2px 4px rgba(0,0,0,.35),0 16px 30px -14px rgba(0,0,0,.9)}
+.btn-soon em{background:rgba(230,192,106,.16);color:var(--gold-2)}
+.btn svg.i{transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.btn:hover svg.i{transform:translateX(2px)}
+
+/* ───────────────────────── 4 · flat icons with a golden lining ───────────────────────── */
+svg.i{fill:none;stroke:url(#aida-gold);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+svg.i .f{fill:rgba(230,192,106,.17);stroke:url(#aida-gold)}
+svg.i .l{fill:none;stroke:url(#aida-gold)}
+.marq-row .spark{color:var(--gold)}
+/* icon chips: dark glass, gold lining */
+.hcard .meta .ic,.sp-tab .tm .ic,.tile .tic,.checks .ck,.qa .pm,.fl-box,.sp-label .ic,.pz-micbtn{
+  background:linear-gradient(180deg,rgba(230,192,106,.16),rgba(230,192,106,.03)),#0C0D20;
+  box-shadow:0 0 0 1px rgba(230,192,106,.5) inset}
+.hcard .meta .ic{backdrop-filter:blur(8px)}
+.hcard.on .meta .ic,.sp-tab.on .tm .ic{background:linear-gradient(180deg,rgba(247,227,166,.32),rgba(230,192,106,.08)),#0C0D20;box-shadow:0 0 0 1px rgba(247,227,166,.85) inset,0 0 16px -2px var(--gold-glow);color:inherit}
+.sp-label .ic{background:#0B0C1B;color:inherit}
+.tile .tic svg{stroke-width:1.4}
+.step .sic svg{stroke-width:1.3}
+.cross .step.on .sic{filter:drop-shadow(0 0 10px rgba(230,192,106,.8))}
+.cross .step .no{box-shadow:0 0 0 1px rgba(230,192,106,.35) inset}
+.cross .step.on .no{color:#1a1203;background:linear-gradient(180deg,#F7E3A6,#D9A94B);box-shadow:0 0 14px -2px var(--gold-glow)}
+.pz-micbtn{box-shadow:0 0 0 2px rgba(230,192,106,.75) inset,0 0 30px rgba(230,192,106,.3)}
+.pz-micbtn i{box-shadow:0 0 0 1px rgba(230,192,106,.6)}
+.qa .pm svg{width:15px;height:15px}
+/* benefit ticks: gold when done */
+.fl-box svg{stroke:#1a1203}
+.fl-box{background:transparent;box-shadow:inset 0 0 0 1.5px rgba(230,192,106,.55)}
+.fl-item.done .fl-box{background:linear-gradient(180deg,#F7E3A6,#D9A94B);box-shadow:0 0 14px rgba(230,192,106,.6)}
+.fl-x svg{stroke:#6E7193}.fl-x svg .f{fill:rgba(110,113,147,.15);stroke:#6E7193}.fl-x svg .l{stroke:#6E7193}
+
+/* ───────────────────────── 5 · golden linings on cards ───────────────────────── */
+/* a metallic gold hairline (gradient border) on the main surfaces; it brightens on hover / when active */
+/* (.hcard, .fl-team, .fl-panel are already absolutely positioned; .sp-stage, .sp-tab, .lang-toggle, .panel relative) */
+.detail,.chat,.qa,.pill,.saybox{position:relative}
+.detail::after,.sp-stage::after,.chat::after,.fl-panel::after,.fl-team::after,.qa::after,.hcard::after,.sp-tab::after,.pill::after,.cross .panel::after,.saybox::after,.lang-toggle::after{
+  content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;z-index:5;
+  background:var(--gold-line);opacity:var(--gl,.34);transition:opacity .4s;
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.detail,.sp-stage,.chat,.fl-panel{--gl:.55}
+.detail:hover,.sp-stage:hover,.chat:hover,.fl-panel:hover,.fl-team:hover,.qa:hover,.hcard:hover,.sp-tab:hover,.saybox:hover,.cross .panel.on{--gl:1}
+.qa.open,.hcard.on,.sp-tab.on{--gl:1}
+/* states that were violet */
+.hcard.on{box-shadow:0 0 0 1.5px rgba(247,227,166,.75) inset,0 0 0 6px rgba(230,192,106,.09),0 40px 90px -20px rgba(124,108,255,.75)}
+.sp-tab.on{box-shadow:0 0 0 1.5px rgba(247,227,166,.75) inset,0 20px 50px -18px var(--gold-glow)}
+.sp-tab .prog{background:var(--gold-line)}
+.qa.open{box-shadow:0 0 0 1px rgba(230,192,106,.5) inset;background:radial-gradient(60% 80% at 0% 0%,rgba(230,192,106,.08),transparent 70%),#0B0C1B}
+.cross .panel.on{box-shadow:0 0 0 1px rgba(230,192,106,.55) inset,0 0 40px -10px rgba(230,192,106,.35)}
+.lang-toggle button.on{background:rgba(230,192,106,.14);box-shadow:0 0 0 1px rgba(230,192,106,.5) inset;color:#fff}
+.lang-toggle button:focus-visible,.hcard:focus-visible,.sp-tab:focus-visible,.qa button:focus-visible{outline:2px solid var(--gold)}
+.sp-live,.sp-state{box-shadow:0 0 0 1px rgba(230,192,106,.4) inset}
+.sp-state.talk{background:linear-gradient(180deg,rgba(230,192,106,.9),rgba(185,138,52,.9));color:#1a1203}
+.hcard .hstate{box-shadow:inset 0 0 0 1px rgba(230,192,106,.4)}
+.hcard.talk .hstate{background:linear-gradient(180deg,rgba(230,192,106,.9),rgba(185,138,52,.9));color:#1a1203}
+.trio .ph.talking{box-shadow:0 0 0 1.5px rgba(247,227,166,.8) inset,0 0 30px -8px var(--gold-glow)}
+.trio .ph.talking::before{background:conic-gradient(from var(--ang),transparent 0 60%,#F7E3A6 80%,transparent 90%)}
+/* feature tiles: the spotlight border that follows the cursor is gold, plus a faint static lining */
+.tile{box-shadow:0 0 0 1px rgba(230,192,106,.14) inset}
+.tile::before{background:radial-gradient(320px circle at var(--mx,50%) var(--my,50%),rgba(230,192,106,.13),transparent 60%)}
+.tile::after{background:radial-gradient(260px circle at var(--mx,50%) var(--my,50%),rgba(255,241,196,.95),rgba(217,169,75,.45) 45%,transparent 70%)}
+.tile:hover{box-shadow:0 0 0 1px rgba(230,192,106,.3) inset,0 24px 50px -24px rgba(0,0,0,.9)}
+.mak-row span:hover{box-shadow:0 0 0 1px rgba(247,227,166,.7) inset,0 10px 24px -10px var(--gold-glow)}
+.mak-row span i{background:var(--gold)}
+@keyframes makDot{0%,100%{opacity:.5;box-shadow:none}50%{opacity:1;box-shadow:0 0 8px var(--gold)}}
+.plat span.live{box-shadow:0 0 0 1px rgba(230,192,106,.3) inset}
+.plat span.soon b{background:rgba(230,192,106,.16);color:var(--gold-2)}
+.chat.talking .top .who{box-shadow:0 0 0 1.5px var(--gold),0 0 0 5px rgba(230,192,106,.22)}
+.chat .top .who{box-shadow:0 0 0 1.5px rgba(230,192,106,.7)}
+.core{box-shadow:0 0 0 1px rgba(230,192,106,.45) inset,0 30px 80px -10px rgba(124,108,255,.6)}
+@keyframes coreGlow{
+  0%,100%{box-shadow:0 0 0 1px rgba(230,192,106,.4) inset,0 30px 80px -10px rgba(124,108,255,.5)}
+  50%{box-shadow:0 0 0 1px rgba(247,227,166,.7) inset,0 30px 110px -6px rgba(124,108,255,.8),0 0 40px -6px rgba(230,192,106,.35)}}
+.core .in{box-shadow:0 0 0 1px rgba(230,192,106,.3) inset}
+
+/* ───────────────────────── 6 · details ───────────────────────── */
+.eyebrow{color:var(--gold)}
+.eyebrow::before{background:linear-gradient(90deg,transparent,rgba(230,192,106,.75))}
+.eyebrow::after{background:linear-gradient(90deg,rgba(230,192,106,.75),transparent)}
+.pill .tag{background:rgba(230,192,106,.16);color:var(--gold-2)}
+.hero-meta .soon-chip{background:rgba(230,192,106,.1);box-shadow:inset 0 0 0 1px rgba(230,192,106,.35);color:var(--gold-2)}
+.horizon{border-top-color:rgba(230,192,106,.6)}
+.mak{border-top:0;border-bottom:0;position:relative}
+.mak::before,.mak::after{content:"";position:absolute;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(230,192,106,.65) 50%,transparent)}
+.mak::before{top:0}.mak::after{bottom:0}
+.quote{border-left-color:rgba(230,192,106,.6)}
+#scrollProg{background:linear-gradient(90deg,#8A6119,#F7E3A6 55%,#E2B25A);box-shadow:0 0 10px rgba(230,192,106,.7)}
+/* preloader */
+.ap-spin{background:conic-gradient(from 0deg,transparent 0 55%,#E2B25A 78%,#FFF1C4 92%,transparent 100%)}
+.ap-mark img{box-shadow:0 0 0 1px rgba(230,192,106,.6)}
+.ap-glow{background:radial-gradient(circle,rgba(230,192,106,.28),transparent 65%)}
+.ap-line i{background:linear-gradient(90deg,#8A6119,#F7E3A6)}
+
+/* the orb of the problem section: the emblem, as a floating bubble */
+.orb-bubble{position:relative;z-index:3;width:150px;height:150px;border-radius:50%;animation:bubbleFloat 6s ease-in-out infinite;
+  background:radial-gradient(circle at 50% 40%,#161833,#070816 75%);
+  box-shadow:0 0 0 1.5px rgba(247,227,166,.85),0 0 0 8px rgba(230,192,106,.10),0 0 64px rgba(139,124,255,.65),0 26px 50px -12px rgba(0,0,0,.85),inset 0 0 30px rgba(139,124,255,.35)}
+.orb-bubble img{position:absolute;inset:7px;width:calc(100% - 14px);height:calc(100% - 14px);border-radius:50%;object-fit:cover;object-position:50% 42%;display:block}
+.ob-shine{position:absolute;inset:0;border-radius:50%;pointer-events:none;mix-blend-mode:screen;
+  background:radial-gradient(58% 38% at 33% 17%,rgba(255,255,255,.5),rgba(255,255,255,0) 72%),radial-gradient(50% 30% at 70% 92%,rgba(247,227,166,.22),transparent 70%)}
+@keyframes bubbleFloat{0%,100%{transform:translateY(-7px)}50%{transform:translateY(8px)}}
+.orb-cap{position:absolute;left:50%;bottom:2px;transform:translateX(-50%);z-index:5;white-space:nowrap;padding:5px 12px;border-radius:999px;
+  font-family:var(--f-mono);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-2);
+  background:rgba(8,9,22,.82);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 0 0 1px rgba(230,192,106,.4) inset}
+.orb-ring{background:conic-gradient(from 0deg,transparent 0 55%,rgba(247,227,166,.9) 75%,transparent 80%)}
+.orb-pulse{box-shadow:0 0 0 1px rgba(230,192,106,.45)}
+.orb-face{box-shadow:0 0 0 2px #0B0C1B,0 0 0 3px rgba(230,192,106,.7),0 8px 20px -6px rgba(0,0,0,.8)}
+.fl-faces span,.pz-faces span{box-shadow:0 0 0 2px #0E0F22,0 0 0 3px rgba(230,192,106,.4)}
+.pz-faces span.on{box-shadow:0 0 0 2px #0B0C1B,0 0 0 3.5px var(--gold),0 0 18px rgba(230,192,106,.7)}
+/* closing orb */
+.cta-orb{box-shadow:0 0 0 1px rgba(247,227,166,.6) inset,0 0 0 7px rgba(230,192,106,.08),0 0 80px rgba(139,124,255,.55)}
+.co-ring{box-shadow:0 0 0 1px rgba(230,192,106,.5)}
+.cta-orb::after{background:conic-gradient(from 0deg,transparent 0 65%,rgba(247,227,166,.95) 85%,transparent 95%)}
+
+/* Maktech: the word itself is the link */
+.mak h2 .mak-link{color:var(--gold-2);text-decoration:underline;text-decoration-color:rgba(230,192,106,.55);text-decoration-thickness:2px;text-underline-offset:.13em;
+  transition:color .3s,text-decoration-color .3s,text-shadow .3s}
+.mak h2 .mak-link:hover,.mak h2 .mak-link:focus-visible{color:#fff;text-decoration-color:var(--gold);text-shadow:0 0 28px rgba(230,192,106,.6)}
+.mak h2 .mak-link:focus-visible{outline:2px solid var(--gold);outline-offset:6px;border-radius:6px}
+.mak .split>div:first-child{align-items:flex-start}
+
+/* ───────────────────────── 7 · premium footer ───────────────────────── */
+footer.pf{border-top:0;padding-top:92px;
+  background:radial-gradient(46% 26% at 50% 0%,rgba(230,192,106,.09),transparent 72%),radial-gradient(60% 50% at 50% 100%,rgba(124,108,255,.24),transparent 70%)}
+.pf-rule{position:absolute;left:0;right:0;top:0;height:1px;overflow:hidden;background:linear-gradient(90deg,transparent,rgba(230,192,106,.7) 50%,transparent)}
+.pf-rule::after{content:"";position:absolute;top:0;bottom:0;left:-30%;width:30%;background:linear-gradient(90deg,transparent,#fff7d6,transparent);animation:pfShine 7s ease-in-out infinite}
+@keyframes pfShine{0%,55%{left:-30%}100%{left:130%}}
+.fgrid{gap:48px}
+.fbrand .brand{align-items:center;gap:14px}
+.fbrand .mark{width:46px;height:46px;border-radius:13px;box-shadow:0 0 0 1px rgba(230,192,106,.6),0 0 0 5px rgba(230,192,106,.07),0 0 24px -4px rgba(230,192,106,.5)}
+.fb-t{display:flex;flex-direction:column;gap:6px}
+.fb-t b{font-family:var(--f-display);font-size:20px;font-weight:600;letter-spacing:.32em;line-height:1}
+.fb-t small{display:block;margin:0;padding-top:6px;position:relative;font-family:var(--f-mono);font-size:9px;letter-spacing:.2em;text-transform:uppercase;white-space:nowrap;
+  background:linear-gradient(90deg,#F7E3A6,#E2B25A 55%,#B98A34);-webkit-background-clip:text;background-clip:text;color:transparent}
+.fb-t small::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,rgba(247,227,166,.9),rgba(226,178,90,.3) 75%,transparent)}
+.fgrid .fbrand p{margin-top:20px;max-width:32ch}
+.fcta{margin-top:22px}
+.fgrid h4{display:flex;align-items:center;gap:10px;margin:0 0 20px;font-family:var(--f-mono);font-size:11px;font-weight:500;letter-spacing:.22em;text-transform:uppercase;color:var(--gold)}
+.fgrid h4::before{content:"";width:5px;height:5px;transform:rotate(45deg);background:var(--gold-line);flex:none}
+.fgrid h4::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(230,192,106,.5),transparent)}
+.fgrid ul{gap:6px}
+.fgrid li a,.fgrid li span{position:relative;display:inline-flex;align-items:center;padding:5px 0;color:var(--muted);transition:color .3s,transform .35s cubic-bezier(.2,.8,.2,1),text-shadow .3s}
+.fgrid li a::before,.fgrid li span::before{content:"";width:0;height:1px;margin-right:0;background:var(--gold-line);transition:width .35s cubic-bezier(.2,.8,.2,1),margin .35s}
+.fgrid li a:hover,.fgrid li a:focus-visible,.fgrid li span:hover{color:var(--gold-2);transform:translateX(3px);text-shadow:0 0 18px rgba(230,192,106,.45)}
+.fgrid li a:hover::before,.fgrid li a:focus-visible::before,.fgrid li span:hover::before{width:16px;margin-right:9px}
+.fgrid li a:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:4px}
+.fgrid li span{cursor:default}
+footer a:hover{color:#fff}
+footer .ghost{background:linear-gradient(180deg,rgba(247,227,166,.42),rgba(201,154,63,.12) 55%,rgba(201,154,63,0) 92%);-webkit-background-clip:text;background-clip:text;color:transparent;
+  -webkit-text-stroke:1px rgba(230,192,106,.32)}
+.legal{position:relative;align-items:center;border-top:0;padding-block:26px}
+.legal::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(230,192,106,.45),transparent)}
+.legal .fl-mak{color:#C9CADC;transition:color .3s,text-shadow .3s}
+.legal .fl-mak:hover,.legal .fl-mak:focus-visible{color:var(--gold-2);text-shadow:0 0 16px rgba(230,192,106,.5)}
+.totop{position:relative;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;flex:none;
+  background:linear-gradient(180deg,rgba(230,192,106,.16),rgba(230,192,106,.04)),#0C0D20;box-shadow:0 0 0 1px rgba(230,192,106,.55) inset,0 2px 4px rgba(0,0,0,.4),0 12px 22px -10px rgba(0,0,0,.9);
+  transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s}
+.totop svg{transform:rotate(-90deg)}
+.totop:hover,.totop:focus-visible{transform:translateY(-4px);box-shadow:0 0 0 1px rgba(247,227,166,.95) inset,0 0 0 4px rgba(230,192,106,.14),0 16px 28px -8px var(--gold-glow)}
+.totop:focus-visible{outline:2px solid var(--gold);outline-offset:4px}
+@media (max-width:900px){.fgrid .fbrand{grid-column:1 / -1}}
+@media (max-width:560px){.fgrid{grid-template-columns:1fr 1fr;gap:34px 20px}.fb-t small{white-space:normal;max-width:20ch}.legal{padding-right:0}}
+
+/* ───────────────────────── motion preferences ───────────────────────── */
+@media (prefers-reduced-motion:reduce){
+  .topnav .tc,.hero-cta .btn-primary,.fcta,.orb-bubble,.pf-rule::after,.topnav .bar::after{animation:none}
+  .btn:hover::before,.btn:focus-visible::before{animation:none}
+}
+
+/* ───────────────── fixes on top of the reference ───────────────── */
+/* The last row of the page must fade in without sliding: pushed 34px down it can never become visible
+   enough to trigger its reveal when the page is scrolled to the very bottom. */
+footer .legal.rv{translate:none;filter:none}
+/* Icons on a violet button: pale-gold lining so they stay legible */
+.btn-primary svg.i,.btn-primary svg.i .f,.btn-primary svg.i .l{stroke:#FFF1C4}
+.btn-primary svg.i .f{fill:rgba(255,255,255,.22)}
+/* the check mark of a ticked benefit is dark on gold (the generic icon rule above would paint it gold) */
+.fl-box svg.i .l{stroke:#1a1203}
+.legal-r{display:flex;align-items:center;gap:18px}
+footer .ghost{margin-top:56px;margin-bottom:6px}
+@media (max-width:700px){.legal-r{width:100%;justify-content:space-between}}

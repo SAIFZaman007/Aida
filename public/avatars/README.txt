@@ -13,10 +13,14 @@ voice changes with it (male / female — see src/lib/avatars.js).
   <name> = the mode id (coder, executive, architect, security, researcher, writer),
   except Non-stop, which is "non-stop".
 
-All seven modes have clips. Six are 16:9 office scenes that fill the screen
-("wide"); Non-stop is the older 9:16 portrait ("tall", centred and blended into a
-blurred backdrop). The shape and the person's horizontal position ("focus") of each
-avatar are listed in CLIPS in src/lib/avatars.js.
+All seven modes have clips. Six are 16:9 office scenes ("wide"); Non-stop's idle is a 9:16
+portrait ("tall") and its talk clip is 16:9. Whatever the shape, EVERY avatar (idle or talking)
+is shown in the same frame: a 9:16 portrait as tall as the screen (534 x 954 px on a 954 px-tall
+window), centred, over a blurred copy of the avatar's own picture. A 16:9 clip is cropped to that
+frame around the person: "focus" in CLIPS (src/lib/avatars.js) is where the person stands across
+the 16:9 picture. The Maktech logo is behind the person only where the clip itself has it there
+(Non-stop idle); for the 16:9 office scenes it sits beside the person, so it shows in the blurred
+backdrop. To have it behind the person in every avatar, render the clips as 9:16 (like Non-stop idle).
 
 Adding or replacing the clips of a mode
   scripts/encode-avatar-clips.sh <mode-id> <idle-source.mp4> <talk-source.mp4>

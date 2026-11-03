@@ -221,8 +221,10 @@ body.app-locked {
 }
 
 /* ── Video avatar stage ─────────────────────────────────────────────────────────
-   The clips are portrait (9:16). The figure is as tall as the screen, centred, and its
-   left/right edges fade into the blurred backdrop, so a wide screen never shows a hard box. */
+   EVERY avatar (idle or talking, 9:16 or 16:9 clip) is shown in this one frame: a 9:16 portrait
+   as tall as the screen (534 x 954 px on a 954 px-tall window), centred. A 16:9 clip is cropped
+   to it around the person (object-position, see figureX in avatars.js). Its left/right edges fade
+   into the blurred backdrop, so a wide screen never shows a hard box. */
 .stage-figure {
   position: absolute;
   top: 0;
@@ -235,19 +237,6 @@ body.app-locked {
   mask-image: linear-gradient(90deg, transparent 0, #000 22%, #000 78%, transparent 100%);
 }
 .stage-figure > * {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-/* 16:9 clips: the office scene fills the whole screen; a screen of another shape crops the
-   sides (the person's position is set per clip with object-position, see avatars.js). */
-.stage-wide {
-  position: absolute;
-  inset: 0;
-}
-.stage-wide > * {
   position: absolute;
   inset: 0;
   width: 100%;

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { figureX } from "../lib/avatars.js";
 
 /*
   VideoStage — the avatar, as full-screen video behind the whole interface.
@@ -11,9 +12,10 @@ import { useEffect, useRef, useState } from "react";
   Both clips share framing and lighting, so the switch is invisible. The clips are muted
   (the voice comes from the speech engine).
 
-  Two shapes (avatars.js): a "wide" clip is a 16:9 office scene and fills the whole screen
-  (cover, anchored on the person); a "tall" clip is a 9:16 portrait, centred, its sides
-  blended into a blurred copy of its own picture.
+  ONE frame for every avatar, idle or talking: a 9:16 portrait (e.g. 534 x 954 px on a
+  954 px-tall window), as tall as the screen and centred, its sides blended into a blurred copy
+  of the avatar's own picture (the blurred Maktech logo scene). A 9:16 clip simply fills the frame;
+  a 16:9 office clip is cropped to it around the person (`focus`, see figureX in avatars.js).
 
   A mode whose clips have not been added yet (avatar.video === null) shows its still
   portrait in the same place, so every mode always has a face.
@@ -84,26 +86,18 @@ function Layer({ avatar, speaking, fading }) {
     return () => document.removeEventListener("visibilitychange", onVis);
   }, [speaking, fading, video]);
 
-  // Each clip is framed on its own: a 16:9 clip fills the screen, a 9:16 clip is centred over
-  // a blurred copy of its picture (the backdrop is only needed while one of them is tall).
-  const idleWide = video?.shape === "wide";
-  const talkWide = video?.talkShape === "wide";
-  const backdrop = idleWide && talkWide ? null : video?.poster;
-  const frameOf = (wide, focus) => ({
-    cls: wide ? "stage-wide" : "stage-figure",
-    style: wide ? { objectPosition: `${focus ?? 50}% 50%` } : undefined,
-  });
-  const idleFrame = frameOf(idleWide, video?.focus);
-  const talkFrame = frameOf(talkWide, video?.talkFocus);
+  // Every clip fills the same centred 9:16 frame; a 16:9 clip is cropped around the person.
+  const idleStyle = { objectPosition: `${figureX(video?.focus, video?.shape)}% 50%` };
+  const talkStyle = { objectPosition: `${figureX(video?.talkFocus, video?.talkShape)}% 50%` };
   return (
     <div
       className="absolute inset-0 overflow-hidden transition-opacity ease-out"
       style={{ opacity: fading || !entered ? 0 : 1, transitionDuration: `${FADE_MS + 100}ms` }}
     >
-      {backdrop ? (
-        // Blurred, dimmed copy of the clip's own picture fills what the portrait clip does not cover.
+      {video?.poster ? (
+        // Blurred, dimmed copy of the avatar's own picture (Maktech logo and all) fills what the frame does not cover.
         <img
-          src={backdrop}
+          src={video.poster}
           alt=""
           draggable={false}
           className="absolute inset-0 h-full w-full scale-125 object-cover opacity-70"
@@ -115,10 +109,9 @@ function Layer({ avatar, speaking, fading }) {
           style={{ background: "radial-gradient(60% 70% at 50% 38%, #2f3190 0%, #14173f 55%, #080a22 100%)" }}
         />
       )}
-      <div className={video ? "absolute inset-0" : "stage-figure"}>
+      <div className="stage-figure">
         {video ? (
           <>
-            <div className={idleFrame.cls}>
             <video
               ref={idleRef}
               src={video.idle}
@@ -133,10 +126,8 @@ function Layer({ avatar, speaking, fading }) {
               aria-hidden="true"
               onLoadedData={() => setReady(true)}
               className={"transition-opacity duration-500 " + (ready ? "opacity-100" : "opacity-90")}
-              style={idleFrame.style}
+              style={idleStyle}
             />
-            </div>
-            <div className={talkFrame.cls}>
             <video
               ref={talkRef}
               src={video.talk}
@@ -148,9 +139,8 @@ function Layer({ avatar, speaking, fading }) {
               tabIndex={-1}
               aria-hidden="true"
               className="transition-opacity ease-in-out"
-              style={{ ...talkFrame.style, opacity: talkShown ? 1 : 0, transitionDuration: `${FADE_MS}ms` }}
+              style={{ ...talkStyle, opacity: talkShown ? 1 : 0, transitionDuration: `${FADE_MS}ms` }}
             />
-            </div>
           </>
         ) : (
           // No clips yet: the portrait, framed head-to-waist. `multiply` lets a studio-white
