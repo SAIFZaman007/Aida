@@ -53,15 +53,8 @@ p{margin:0}
 .hero{padding-top:84px;overflow:hidden}
 .hero-bg{position:absolute;inset:0;pointer-events:none;
   background:
-   radial-gradient(60% 50% at 50% 0%,rgb(240 112 24 / .18),transparent 70%),
-   linear-gradient(90deg,rgb(var(--w-rgb) / .025) 1px,transparent 1px) 0 0/120px 100%;}
-.beam{position:absolute;top:-40px;width:260px;height:620px;pointer-events:none;background:linear-gradient(180deg,rgb(var(--w-rgb) / .1),rgb(var(--w-rgb) / 0) 80%);clip-path:polygon(40% 0,60% 0,100% 100%,0 100%);opacity:.55}
-.beam.l{left:8%;transform:rotate(18deg)}
-.beam.r{right:8%;transform:rotate(-18deg)}
-.star{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;opacity:.6}
+   radial-gradient(60% 50% at 50% 0%,rgb(240 112 24 / .18),transparent 70%);}
 .hero-copy{position:relative;text-align:center;display:flex;flex-direction:column;align-items:center;gap:26px}
-.pill{display:inline-flex;align-items:center;gap:10px;padding:6px 14px 6px 6px;border-radius:999px;background:rgb(var(--w-rgb) / .03);box-shadow:0 0 0 1px var(--line-2) inset;font-size:13px;color:var(--muted)}
-.pill .tag{padding:3px 10px;border-radius:999px;background:rgb(255 127 36 / .18);color:var(--accent-ink);font-weight:600;font-size:12px}
 .hero h1{font-size:clamp(46px,7.4vw,96px);line-height:.98;letter-spacing:-.045em;font-weight:600}
 .hero h1 .line2{display:block}
 .hero-sub{font-size:19px;color:var(--muted);max-width:620px;line-height:1.55}

@@ -3,7 +3,7 @@
   backend so older sessions keep working; they are just not offered for new ones.
 */
 export const MODES = [
-  ["nonstop", "Non-stop"],
+  ["nonstop", "Aida"],
   ["executive", "Executive"],
   ["coder", "Coder"],
   ["architect", "Architect"],
@@ -19,9 +19,9 @@ export const MODE_LABEL = {
 };
 
 // What each mode is FOR (also what it is not for: a specialist sends you to the right
-// mode for anything outside its field; only Non-stop answers everything).
+// mode for anything outside its field; only Aida answers everything).
 export const MODE_HINT = {
-  nonstop: "Non-stop — expert on everything. Just talk: the mic stays on and replies are spoken.",
+  nonstop: "Aida — expert on everything. Just talk: the mic stays on and replies are spoken.",
   executive: "Executive — planning, priorities, decisions and delivery.",
   coder: "Coder — write, debug, review and test code.",
   architect: "Architect — system design: structure, data, APIs and infrastructure.",

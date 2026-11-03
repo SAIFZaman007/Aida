@@ -39,7 +39,6 @@ export function motion() {
     els.forEach((el) => io.observe(el));
     const layers = [];
     const add = (sel, fn) => $$(sel).forEach((el, i) => layers.push([el, fn, i]));
-    add('#stars', (el, y) => (el.style.translate = `0 ${y * 0.45}px`));
     add('.hero-bg', (el, y) => (el.style.translate = `0 ${y * 0.18}px`));
     add('.ft-bg i', (el, _y, r, i) => (el.style.translate = `0 ${r * (i % 2 ? 0.18 : -0.14)}px`));
     add('.orb-glow', (el, _y, r) => (el.style.translate = `0 ${r * 0.06}px`));

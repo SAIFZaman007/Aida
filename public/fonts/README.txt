@@ -1,7 +1,7 @@
-A.I.D.A brand typeface
+Aida brand typeface
 ======================
 
-The brand name "A.I.D.A" is set in  Prestige Elite M Bold  (URW Type Foundry) wherever it appears
+The brand name "Aida" (and the footer wordmark "A.I.D.A") is set in  Prestige Elite M Bold  (URW Type Foundry) wherever it appears
 in the interface (see src/theme/brand.css).
 
 Prestige Elite M is a licensed font and is NOT bundled. To switch it on:

@@ -26,7 +26,7 @@ function createWindow() {
     minWidth: 980,
     minHeight: 640,
     backgroundColor: "#060818",
-    title: "A.I.D.A",
+    title: "Aida",
     // Window / taskbar icon (installers use build/icon.*; this covers dev runs and Linux).
     icon: path.join(__dirname, "..", "build", "icon.png"),
     webPreferences: {

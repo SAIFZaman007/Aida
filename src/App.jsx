@@ -7,7 +7,7 @@ import HistoryPanel from "./components/HistoryPanel.jsx";
 import ControlDock from "./components/ControlDock.jsx";
 import SpecialistCarousel from "./components/SpecialistCarousel.jsx";
 import WindowControls from "./components/WindowControls.jsx";
-import { ChatIcon, ChevronRightIcon, CloseIcon, GearIcon, SparkleIcon } from "./components/icons.jsx";
+import { ChatIcon, ChevronRightIcon, CloseIcon, GearIcon } from "./components/icons.jsx";
 import { api } from "./lib/api.js";
 import { useSettings, updateSettings } from "./lib/settings.js";
 import { avatarForPersona, DEFAULT_PERSONA } from "./lib/avatars.js";
@@ -151,7 +151,7 @@ export default function App() {
     const known = proj.id === project?.id ? conversations : await api.listConversations(proj.id);
     let c = known.find((x) => x.persona === id);
     if (!c) {
-      c = await api.createConversation(proj.id, id === "nonstop" ? "Non-stop conversation" : `${MODE_LABEL[id] || id} session`, id);
+      c = await api.createConversation(proj.id, id === "nonstop" ? "Aida conversation" : `${MODE_LABEL[id] || id} session`, id);
     }
     if (created) setProjects((ps) => [created, ...ps]);
     setProject(proj);
@@ -159,7 +159,7 @@ export default function App() {
     setConversation(c);
     return c;
   }
-  // Non-stop = open, hands-free voice conversation: open (or start) its session and switch the mic on.
+  // Aida = open, hands-free voice conversation: open (or start) its session and switch the mic on.
   async function startNonstop() {
     setPersona("nonstop");
     updateSettings({ voiceMode: true });
@@ -329,7 +329,7 @@ export default function App() {
         <BrandLink desktop={desktop}>
           <img
             src={BRAND.mark}
-            alt={desktop ? "A.I.D.A logo" : ""}
+            alt={desktop ? "Aida logo" : ""}
             width={46}
             height={46}
             className="h-[46px] w-[46px] rounded-xl border border-accent/40 object-cover shadow-glow transition group-hover:border-accent group-hover:shadow-[0_0_26px_-4px_rgb(var(--accent-rgb)/0.7)]"
@@ -373,11 +373,8 @@ export default function App() {
         }
         aria-hidden={historyOpen}
       >
-        <span className="pointer-events-auto inline-flex items-center gap-2 rounded-full [@media(max-height:760px)]:hidden border border-accent/50 bg-accent/15 px-4 py-1.5 text-[11.5px] font-semibold uppercase tracking-[0.14em] text-frost">
-          <SparkleIcon size={15} className="text-accent-soft" /> Welcome to <Aida />
-        </span>
-        <h1 className="mt-5 text-[clamp(40px,5vw,66px)] [@media(max-height:760px)]:mt-0 font-bold leading-[1.02] tracking-tight text-frost">
-          I’m <Aida>A.<span className="bg-gradient-to-r from-accent-soft to-accent bg-clip-text text-transparent">I.D.A</span></Aida>
+        <h1 className="text-[clamp(40px,5vw,66px)] font-bold leading-[1.02] tracking-tight text-frost">
+          I’m <Aida className="text-accent" />
         </h1>
         <p className="mt-1 text-[clamp(22px,2.6vw,36px)] font-light leading-tight text-frost">Your Virtual AI Team.</p>
         <p className="mt-4 max-w-[400px] text-[14.5px] leading-relaxed text-frost/75 [@media(max-height:820px)]:hidden">

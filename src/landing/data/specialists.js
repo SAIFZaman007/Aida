@@ -2,16 +2,16 @@ import { AVATARS } from '../../lib/avatars.js';
 import { BASE } from '../config.js';
 /**
  * Media comes from the app itself: the same encoded clips the assistant plays
- * (public/avatars/video) plus one 16:9 still per specialist (public/landing).
- *   face        16:9 still: thumbnails, round face crops, wide framings (framed with `geo`)
- *   poster      first frame of the idle clip (portrait for Non-stop)
- *   idle/talk   the loops; idleShape/talkShape say whether a clip is 16:9 ("wide") or 9:16 ("tall")
- *   geo         [face centre x, head top y] as fractions of the 16:9 frame
+ * (public/avatars/video). Every clip is a 9:16 portrait with the person centred.
+ *   face / poster   first frame of the idle clip: thumbnails, stills and stages (framed with `geo`)
+ *   crop            square head-and-shoulders crop, centred on the face, for the round avatars
+ *   idle/talk       the loops; idleShape/talkShape say whether a clip is 16:9 ("wide") or 9:16 ("tall")
+ *   geo             [face centre x, head top y] as fractions of the frame
  */
 const media = (key, geo) => {
   const v = AVATARS[key].video;
   return {
-    face: `${BASE}landing/face-${key}.jpg`,
+    face: v.poster,
     /** Square head-and-shoulders crop, centred on the face, for the round avatars. */
     crop: `${BASE}landing/faces/${key}.webp`,
     poster: v.poster,
@@ -35,7 +35,7 @@ export const SPECIALISTS = [
             { from: 'ai', text: 'Here’s a side-by-side on fees, settlement time and recurring billing. One source looks outdated, so I’ve flagged it.' },
             { from: 'you', text: 'Which one should I start with?' },
         ],
-        media: media('researcher', [0.37, 0.07]),
+        media: media('researcher', [0.496, 0.267]),
     },
     {
         key: 'architect', name: 'Architect', role: 'System Design', icon: 'layers', voice: 'Male voice',
@@ -49,7 +49,7 @@ export const SPECIALISTS = [
             { from: 'ai', text: 'Start with a modular monolith: Postgres, Redis for live locations and a queue for trip matching. Split services only when load demands it.' },
             { from: 'you', text: 'খরচ কেমন পড়বে?', tr: 'What will it cost?' },
         ],
-        media: media('architect', [0.48, 0.10]),
+        media: media('architect', [0.496, 0.167]),
     },
     {
         key: 'executive', name: 'Executive', role: 'Strategy & Management', icon: 'chart', voice: 'Female voice',
@@ -63,21 +63,21 @@ export const SPECIALISTS = [
             { from: 'ai', text: 'Here are five: Q3 revenue, the hiring plan, the product launch, key risks and one clear ask. Shall I draft the notes?' },
             { from: 'you', text: 'Yes, keep it to one page.' },
         ],
-        media: media('executive', [0.5, 0.11]),
+        media: media('executive', [0.496, 0.233]),
     },
     {
-        key: 'nonstop', name: 'Non-stop', role: 'General AI Assistant', icon: 'infinity', voice: 'Female voice',
+        key: 'nonstop', name: 'Aida', role: 'General AI Assistant', icon: 'infinity', voice: 'Female voice',
         description: 'Your open conversation. Ask anything on any topic. The mic stays on and replies are spoken, hands-free.',
         checks: ['Expert on everything, no topic limit', 'Hands-free spoken conversation', 'Recalls context across all modes'],
         tryPrompt: 'Plan my day: a client call at 11, then the report.',
-        headline: 'Non-stop keeps one open conversation going all day, so you can ask anything and hear the answer without touching the keyboard.',
+        headline: 'Aida keeps one open conversation going all day, so you can ask anything and hear the answer without touching the keyboard.',
         chips: ['Answers questions on any topic', 'Keeps the mic open, hands-free', 'Remembers context across every mode', 'Brings in a specialist when it helps'],
         chat: [
             { from: 'you', text: 'আজকের দিনটা একটু গুছিয়ে দাও।', tr: 'Help me plan my day.' },
             { from: 'ai', text: 'Sure. Client call at 11, the report after lunch and a short break at 4. Want reminders?' },
             { from: 'you', text: 'Yes, ten minutes before each one.' },
         ],
-        media: media('nonstop', [0.495, 0.17]),
+        media: media('nonstop', [0.489, 0.271]),
     },
     {
         key: 'coder', name: 'Coder', role: 'Programming & Development', icon: 'code', voice: 'Male voice',
@@ -91,7 +91,7 @@ export const SPECIALISTS = [
             { from: 'ai', text: 'That’s React Strict Mode. It mounts components twice in development to catch side effects. Add a cleanup function and you’re safe.' },
             { from: 'you', text: 'ক্লিনআপ ফাংশনের একটা উদাহরণ দাও।', tr: 'Show me a cleanup example.' },
         ],
-        media: media('coder', [0.42, 0.03]),
+        media: media('coder', [0.489, 0.158]),
     },
     {
         key: 'security', name: 'Security', role: 'Cybersecurity & Protection', icon: 'shield', voice: 'Male voice',
@@ -105,7 +105,7 @@ export const SPECIALISTS = [
             { from: 'ai', text: 'Fix three things first: rate-limit the login route, turn on 2FA for admins and regenerate the session after sign-in.' },
             { from: 'you', text: 'রেট লিমিট কীভাবে যোগ করব?', tr: 'How do I add rate limiting?' },
         ],
-        media: media('security', [0.47, 0.06]),
+        media: media('security', [0.506, 0.163]),
     },
     {
         key: 'writer', name: 'Writer', role: 'Content & Communication', icon: 'pen', voice: 'Female voice',
@@ -119,7 +119,7 @@ export const SPECIALISTS = [
             { from: 'ai', text: 'Done. The deadline stays clear, the opening is softer and it ends with a next step they can say yes to.' },
             { from: 'you', text: 'এবার বাংলায় একটা ছোট ভার্সন দাও।', tr: 'Now give me a short version in Bengali.' },
         ],
-        media: media('writer', [0.5, 0.047]),
+        media: media('writer', [0.489, 0.238]),
     },
 ];
 /** Display order used by tabs, orbits and face rows. */

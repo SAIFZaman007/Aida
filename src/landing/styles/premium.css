@@ -136,8 +136,8 @@ svg.i .l{fill:none;stroke:url(#aida-gold)}
 /* ───────────────────────── 5 · golden linings on cards ───────────────────────── */
 /* a metallic gold hairline (gradient border) on the main surfaces; it brightens on hover / when active */
 /* (.hcard, .fl-team, .fl-panel are already absolutely positioned; .sp-stage, .sp-tab, .lang-toggle, .panel relative) */
-.detail,.chat,.qa,.pill,.saybox{position:relative}
-.detail::after,.sp-stage::after,.chat::after,.fl-panel::after,.fl-team::after,.qa::after,.hcard::after,.sp-tab::after,.pill::after,.cross .panel::after,.saybox::after,.lang-toggle::after{
+.detail,.chat,.qa,.saybox{position:relative}
+.detail::after,.sp-stage::after,.chat::after,.fl-panel::after,.fl-team::after,.qa::after,.hcard::after,.sp-tab::after,.cross .panel::after,.saybox::after,.lang-toggle::after{
   content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;z-index:5;
   background:var(--gold-line);opacity:var(--gl,.34);transition:opacity .4s;
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
@@ -180,7 +180,6 @@ svg.i .l{fill:none;stroke:url(#aida-gold)}
 .eyebrow{color:var(--gold)}
 .eyebrow::before{background:linear-gradient(90deg,transparent,rgba(230,192,106,.75))}
 .eyebrow::after{background:linear-gradient(90deg,rgba(230,192,106,.75),transparent)}
-.pill .tag{background:rgba(230,192,106,.16);color:var(--gold-2)}
 .hero-meta .soon-chip{background:rgba(230,192,106,.1);box-shadow:inset 0 0 0 1px rgba(230,192,106,.35);color:var(--gold-2)}
 .horizon{border-top-color:rgba(230,192,106,.6)}
 .mak{border-top:0;border-bottom:0;position:relative}

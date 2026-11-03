@@ -112,7 +112,7 @@ export default function ChatPanel({ conversation, avatar, onActivity, onNotice, 
     onActivity?.({ speaking, listening: capturing, thinking: thinkingNow });
   }, [speaking, capturing, thinkingNow, onActivity]);
 
-  // A Non-stop session means "keep listening": switch hands-free voice on.
+  // A Aida session means "keep listening": switch hands-free voice on.
   // (Not when the session was opened only to type into: autoVoice is false then.)
   useEffect(() => {
     if (autoVoice && conversation?.persona === "nonstop") updateSettings({ voiceMode: true });
@@ -397,7 +397,7 @@ export default function ChatPanel({ conversation, avatar, onActivity, onNotice, 
       <div className="flex h-full flex-col items-center justify-center gap-5 px-6 text-center">
         <img
           src={BRAND.logo}
-          alt="A.I.D.A — Artificial Intelligence · Desktop Assistant"
+          alt="Aida — Artificial Intelligence · Desktop Assistant"
           className="w-full max-w-[300px] select-none"
           draggable={false}
         />

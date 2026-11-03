@@ -9,7 +9,7 @@ export default function BrandLink({ desktop, children }) {
   return (
     <a
       href="/"
-      aria-label="A.I.D.A home — back to the landing page"
+      aria-label="Aida home — back to the landing page"
       title="Back to home"
       className={cls + " app-no-drag cursor-pointer outline-none transition focus-visible:ring-2 focus-visible:ring-accent/70 focus-visible:ring-offset-4 focus-visible:ring-offset-transparent"}
     >

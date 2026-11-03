@@ -3,6 +3,6 @@
 const BASE = (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.BASE_URL) || "./";
 
 export const BRAND = {
-  logo: `${BASE}brand/aida-logo.webp`, // full lockup: emblem + A.I.D.A + tagline
+  logo: `${BASE}brand/aida-logo.webp`, // full lockup: emblem + wordmark + tagline
   mark: `${BASE}brand/mark-96.png`, // emblem only, for the header
 };

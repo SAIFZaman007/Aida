@@ -1,10 +1,10 @@
 /*
-  Sets every "A.I.D.A" (and "AIDA") in a block of rendered text in the brand typeface by wrapping
+  Sets every "Aida" (and "A.I.D.A", "AIDA") in a block of rendered text in the brand typeface by wrapping
   it in <span class="aida">. Text nodes only: attributes, scripts, inputs and anything already
   wrapped are left alone. Used once on the landing page (plain DOM, rendered once). The assistant's React screens
   use the <Aida> component instead, so React never sees a DOM it did not render.
 */
-const NAME = /\bA\.I\.D\.A(?![\w])|\bAIDA\b/g;
+const NAME = /\bA\.I\.D\.A(?![\w])|\bAIDA\b|\bAida\b/g;
 const SKIP = new Set(["SCRIPT", "STYLE", "TEXTAREA", "INPUT", "SELECT", "OPTION", "TITLE", "NOSCRIPT"]);
 
 export function brandify(root = document.body) {

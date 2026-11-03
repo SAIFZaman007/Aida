@@ -22,7 +22,7 @@
   ADD THE VIDEOS OF A MODE (no other code change):
     1. scripts/encode-avatar-clips.sh <mode-id> <idle.mp4> <talk.mp4>
        (writes public/avatars/video/<name>-idle.mp4, -talk.mp4, -poster.jpg;
-        <name> = the mode id, except Non-stop which is "non-stop");
+        <name> = the mode id, except the Aida mode (id "nonstop") which is "non-stop");
     2. add the mode id to VIDEO_READY, and its shape/focus to CLIPS, below.
   See public/avatars/README.txt for the recommended encoding.
 */
@@ -40,16 +40,17 @@ const FEMALE_HINTS = [
 /** Modes whose idle + talk clips are in public/avatars/video/. */
 export const VIDEO_READY = ["nonstop", "executive", "coder", "architect", "security", "researcher", "writer"];
 
-// Framing of each avatar's clips. `shape`/`focus` describe the idle clip; `talkShape` /
-// `talkFocus` the talk clip when it differs (Non-stop: a 9:16 close-up idle and a 16:9 talk).
+// Framing of each avatar's clips. Every clip is a 9:16 portrait with the person centred, so each
+// needs no horizontal crop (focus 50). A 16:9 clip would use shape "wide" and its own `focus`.
+// `talkShape` / `talkFocus` only need setting when the talk clip is framed differently.
 const CLIPS = {
-  nonstop: { shape: "tall", focus: 50, talkShape: "wide", talkFocus: 50 },
-  executive: { shape: "wide", focus: 51 },
-  coder: { shape: "wide", focus: 43 },
-  architect: { shape: "wide", focus: 48 },
-  security: { shape: "wide", focus: 46 },
-  researcher: { shape: "wide", focus: 39 },
-  writer: { shape: "wide", focus: 45 },
+  nonstop: { shape: "tall", focus: 50 },
+  executive: { shape: "tall", focus: 50 },
+  coder: { shape: "tall", focus: 50 },
+  architect: { shape: "tall", focus: 50 },
+  security: { shape: "tall", focus: 50 },
+  researcher: { shape: "tall", focus: 50 },
+  writer: { shape: "tall", focus: 50 },
 };
 
 function clipFrame(persona) {
@@ -97,7 +98,7 @@ const make = (persona, label, gender) => {
 };
 
 export const AVATARS = {
-  nonstop: make("nonstop", "Non-stop", "female"),
+  nonstop: make("nonstop", "Aida", "female"),
   executive: make("executive", "Executive", "female"),
   coder: make("coder", "Coder", "male"),
   architect: make("architect", "Architect", "male"),
@@ -106,7 +107,7 @@ export const AVATARS = {
   writer: make("writer", "Writer", "female"),
 };
 
-// Non-stop is the default avatar: its idle video is what fills the screen on start.
+// Aida is the default avatar: its idle video is what fills the screen on start.
 export const DEFAULT_PERSONA = "nonstop";
 
 // Modes that still exist on the backend (older sessions) but are not offered in the

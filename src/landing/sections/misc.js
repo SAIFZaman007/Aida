@@ -4,7 +4,7 @@ import { $, $$ } from '../lib/dom.js';
 import { atomSvg, icon } from '../lib/icons.js';
 /** Logos, app links and brand images. */
 export function brand() {
-    $$('[data-logo]').forEach((el) => { el.innerHTML = `<img src="${ASSETS.mark}" alt="A.I.D.A">`; });
+    $$('[data-logo]').forEach((el) => { el.innerHTML = `<img src="${ASSETS.mark}" alt="Aida">`; });
     $$('img[data-asset]').forEach((img) => { img.src = img.dataset.asset === 'emblem' ? ASSETS.emblem : ASSETS.mark; });
     $$('a[data-app]').forEach((a) => { a.href = APP_URL; });
     $$('[data-atom]').forEach((el) => { if (!el.firstChild) el.innerHTML = atomSvg(); });
@@ -14,17 +14,6 @@ export function marquee() {
     const row = (arr) => { const h = arr.map((t) => `<span>${t}${spark}</span>`).join(''); return h + h + h; };
     $('#mq1').innerHTML = row(MARQUEE.specialists);
     $('#mq2').innerHTML = row(MARQUEE.features);
-}
-export function stars() {
-    const st = $('#stars');
-    if (!st)
-        return;
-    let seed = 7;
-    const rnd = () => { seed = Math.sin(seed) * 10000; return seed - Math.floor(seed); };
-    let h = '';
-    for (let i = 0; i < 40; i++)
-        h += `<span class="star" style="left:${rnd() * 100}%;top:${rnd() * 620}px;opacity:${0.2 + rnd() * 0.6}"></span>`;
-    st.innerHTML = h;
 }
 /** Maktech skill tags: duplicated rows for a seamless marquee. */
 export function maktech() {

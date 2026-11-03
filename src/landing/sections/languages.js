@@ -76,7 +76,7 @@ export function languages() {
                     box.querySelector('.typing-dots')?.remove();
                     const d = document.createElement('div');
                     d.className = `msg ai${isBengali(text) ? ' bn' : ''}`;
-                    d.innerHTML = '<small style="font-family:var(--f-mono)"><span class="aida">A.I.D.A</span></small><span class="tx"></span>';
+                    d.innerHTML = '<small style="font-family:var(--f-mono)"><span class="aida">Aida</span></small><span class="tx"></span>';
                     box.append(d);
                     trim();
                     status(`Speaking · sentence ${n} of ${aiTotal}`, true);

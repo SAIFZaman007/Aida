@@ -15,7 +15,7 @@ function wire(id, dir) {
     <circle r="3" fill="#FFA45C" class="fl-dot"><animateMotion dur="2.6s" begin="1.3s" repeatCount="indefinite"><mpath href="#${id}"/></animateMotion></circle>
   </svg>`;
 }
-/** Problem section: scattered tools → animated A.I.D.A brain → benefits checklist. */
+/** Problem section: scattered tools → animated Aida brain → benefits checklist. */
 export function problemFlow() {
     const f = $('#flow');
     if (!f)
@@ -31,18 +31,18 @@ export function problemFlow() {
         <span class="orb-glow"></span><span class="orb-pulse"></span><span class="orb-pulse p2"></span>
         <div class="orb-orbit" id="orbOrbit"></div>
         <span class="orb-ring"></span>
-        <div class="orb-bubble"><img data-asset="emblem" alt="A.I.D.A" width="150" height="150"><span class="ob-shine"></span></div>
-        <span class="orb-cap">A.I.D.A · One shared brain</span>
+        <div class="orb-bubble"><img data-asset="emblem" alt="Aida" width="150" height="150"><span class="ob-shine"></span></div>
+        <span class="orb-cap">Aida · One shared brain</span>
       </div>
       ${wire('flwB', 'out')}
     </div>
-    <div class="fl-col fl-right" aria-label="With A.I.D.A">
+    <div class="fl-col fl-right" aria-label="With Aida">
       <div class="fl-panel">
-        <div class="fl-ph"><span class="mark" data-logo style="width:28px;height:28px;border-radius:8px"></span><b>A.I.D.A</b><span class="fl-count" id="flCount">0/5</span></div>
+        <div class="fl-ph"><span class="mark" data-logo style="width:28px;height:28px;border-radius:8px"></span><b>Aida</b><span class="fl-count" id="flCount">0/5</span></div>
         ${BENEFITS.map((t) => `<div class="fl-item"><span class="fl-box">${icon('check')}</span><span>${t}</span></div>`).join('')}
       </div>
       <div class="fl-team"><div class="fl-th"><small>SPECIALISTS ONLINE</small><span class="fl-live"><span class="dot"></span>Shared context</span></div><div class="fl-faces" id="flFaces"></div></div>
-      <div class="fl-speak"><small>NON-STOP · SPEAKING</small><span class="bn">আপনাকে কীভাবে সাহায্য করতে পারি?</span><span class="bars" data-bars="16"></span></div>
+      <div class="fl-speak"><small>AIDA · SPEAKING</small><span class="bn">আপনাকে কীভাবে সাহায্য করতে পারি?</span><span class="bars" data-bars="16"></span></div>
     </div>`;
     const orbit = $('#orbOrbit');
     ORDER.forEach((k, i) => {

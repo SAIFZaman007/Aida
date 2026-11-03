@@ -48,10 +48,9 @@ test("round avatars use a dedicated, centred square crop per specialist", () => 
   assert.match(av, /backgroundPosition = '50% 50%'/);
 });
 
-test("Writer: the wide still and the round crop are the new model (white studio picture)", () => {
-  const w = SPECIALISTS.find((s) => s.key === "writer");
-  assert.deepEqual(w.media.geo, [0.5, 0.047]);
-  assert.ok(existsSync(here("../public/landing/face-writer.jpg")));
+test("Writer: the card still and the round crop are the new model (white studio picture)", () => {
+  assert.ok(existsSync(here("../public/avatars/stills/writer.webp")));
+  assert.ok(existsSync(here("../public/landing/faces/writer.webp")));
 });
 
 test("favicons are transparent PNGs/ICO in 16, 32 and 48 px, and the page links them", () => {

@@ -1,16 +1,16 @@
 export const FAQ = [
-    ['What is A.I.D.A?', 'A.I.D.A (Artificial Intelligence Desktop Assistant) is a voice-first AI assistant with a talking avatar. It brings seven specialist modes into one app, so you can plan, build, analyze, create and protect without switching tools.'],
-    ['Can I talk to it in Bengali?', 'Yes. Speak or type in Bengali script, English, or Bengali written in English letters. A.I.D.A replies in the language of your latest message and reads the answer aloud.'],
-    ['Can I interrupt it while it’s speaking?', 'Yes. Start talking at any moment and A.I.D.A stops to listen, just like a real conversation.'],
-    ['Does each specialist remember my conversations?', 'Each mode keeps its own memory, so the Coder’s context never muddles the Writer’s. Non-stop can recall across all of them.'],
-    ['Which platforms does it run on?', 'A.I.D.A runs in your browser today at aida.maktechgroup.com. A desktop app for Windows, macOS and Linux is coming soon, with the same voice, history and specialists.'],
-    ['Can A.I.D.A make mistakes?', 'It can. A.I.D.A is instructed not to invent facts, numbers or sources, and to say when it is unsure. Check important information before you rely on it.'],
+    ['What is Aida?', 'Aida (Artificial Intelligence Desktop Assistant) is a voice-first AI assistant with a talking avatar. It brings seven specialist modes into one app, so you can plan, build, analyze, create and protect without switching tools.'],
+    ['Can I talk to it in Bengali?', 'Yes. Speak or type in Bengali script, English, or Bengali written in English letters. Aida replies in the language of your latest message and reads the answer aloud.'],
+    ['Can I interrupt it while it’s speaking?', 'Yes. Start talking at any moment and Aida stops to listen, just like a real conversation.'],
+    ['Does each specialist remember my conversations?', 'Each mode keeps its own memory, so the Coder’s context never muddles the Writer’s. Aida can recall across all of them.'],
+    ['Which platforms does it run on?', 'Aida runs in your browser today at aida.maktechgroup.com. A desktop app for Windows, macOS and Linux is coming soon, with the same voice, history and specialists.'],
+    ['Can Aida make mistakes?', 'It can. Aida is instructed not to invent facts, numbers or sources, and to say when it is unsure. Check important information before you rely on it.'],
 ];
 export const MARQUEE = {
-    specialists: ['Non-stop', 'Executive', 'Coder', 'Architect', 'Security', 'Researcher', 'Writer'],
+    specialists: ['Aida', 'Executive', 'Coder', 'Architect', 'Security', 'Researcher', 'Writer'],
     features: ['Talking avatars', 'Hands-free voice', 'English & বাংলা', 'Live captions', 'Memory per specialist', 'Projects & history'],
 };
-/** Problem section: the separate tools A.I.D.A replaces. [name, problem, tag] */
+/** Problem section: the separate tools Aida replaces. [name, problem, tag] */
 export const CHAOS = [
     ['Coding assistant', 'Re-explain your project on every switch', 'Context lost'],
     ['Research tool', 'Generic answers, no specialist depth', 'Shallow'],

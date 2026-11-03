@@ -192,7 +192,7 @@ export default function Settings({ open, onClose, model = "—", online = false 
             />
           </Row>
           <p className="font-sans text-[10px] text-steel/60">
-            In voice mode <Aida>AIDA</Aida> listens continuously; speaking over the avatar stops it
+            In voice mode <Aida /> listens continuously; speaking over the avatar stops it
             instantly. Headphones recommended to prevent echo.
           </p>
         </section>

@@ -24,11 +24,11 @@ test("the voice gender matches the person on screen", () => {
   for (const a of allAvatars()) assert.ok(a.voiceHints.length > 3);
 });
 
-test("Non-stop is the default avatar and has its idle + talk videos", () => {
+test("Aida (id nonstop) is the default avatar and has its idle + talk videos", () => {
   assert.equal(DEFAULT_PERSONA, "nonstop");
   assert.ok(VIDEO_READY.includes("nonstop"));
   const v = AVATARS.nonstop.video;
-  assert.ok(v, "Non-stop has video");
+  assert.ok(v, "Aida has video");
   for (const url of [v.idle, v.talk, v.poster]) assert.ok(existsSync(fileOf(url)), `${url} is missing`);
   assert.notEqual(v.idle, v.talk);
 });
@@ -43,23 +43,21 @@ test("a mode is marked video-ready only when its files exist; the others keep th
   }
 });
 
-test("every mode now has its idle + talk clips, framed as 16:9 (wide) except Non-stop (9:16, tall)", () => {
+test("every mode now has its idle + talk clips, all 9:16 portraits (tall, person centred)", () => {
   assert.deepEqual([...VIDEO_READY].sort(), MODES.map(([id]) => id).sort());
   for (const a of allAvatars()) {
     assert.ok(a.video, `${a.id} has video`);
-    assert.equal(a.video.shape, a.id === "nonstop" ? "tall" : "wide", a.id);
+    assert.equal(a.video.shape, "tall", a.id);
     assert.ok(a.video.focus >= 0 && a.video.focus <= 100, `${a.id} focus`);
     for (const url of [a.video.idle, a.video.talk, a.video.poster]) assert.ok(existsSync(fileOf(url)), url);
   }
 });
 
-test("Non-stop: tall idle clip, wide talk clip, each framed on its own; the others use one shape for both", () => {
-  const n = AVATARS.nonstop.video;
-  assert.equal(n.shape, "tall");
-  assert.equal(n.talkShape, "wide");
-  for (const a of allAvatars().filter((x) => x.id !== "nonstop")) {
-    assert.equal(a.video.talkShape, a.video.shape, a.id);
+test("every avatar's idle and talk clips share one 9:16 framing, centred", () => {
+  for (const a of allAvatars()) {
+    assert.equal(a.video.talkShape, "tall", a.id);
     assert.equal(a.video.talkFocus, a.video.focus, a.id);
+    assert.equal(a.video.focus, 50, a.id);
   }
 });
 

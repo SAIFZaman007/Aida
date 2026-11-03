@@ -24,24 +24,16 @@ export function frame(el, key) {
     const H = box.clientHeight;
     if (!W || !H)
         return;
-    // A portrait (9:16) clip needs no maths: it fills the box, anchored near the top so the head keeps its room.
-    if (el.dataset.shape === 'tall') {
-        Object.assign(el.style, {
-            position: 'absolute', width: `${W}px`, height: `${H}px`, left: '0px', top: '0px',
-            maxWidth: 'none', objectFit: 'cover', objectPosition: '50% 10%', transform: 'none',
-        });
-        el.style.setProperty('-webkit-mask-image', 'none');
-        el.style.setProperty('mask-image', 'none');
-        box.classList.add('avbox');
-        return;
-    }
-    const [gx, gy] = byKey(key).media.geo;
+    const m = byKey(key).media;
+    const [gx, gy] = m.geo;
+    // Every clip and still is a 9:16 portrait (a 16:9 one is still supported): `ratio` = width ÷ height.
+    const ratio = (el.dataset.shape || m.idleShape) === 'tall' ? 9 / 16 : 16 / 9;
     const [zoom, margin] = contextFor(el);
     let Hd = H * zoom;
-    let Wd = (Hd * 16) / 9;
+    let Wd = Hd * ratio;
     if (Wd < W) {
         Wd = W;
-        Hd = (W * 9) / 16;
+        Hd = W / ratio;
     }
     let left = W / 2 - gx * Wd;
     left = Math.min(0, Math.max(W - Wd, left));
@@ -59,8 +51,8 @@ export function frame(el, key) {
     el.style.setProperty('mask-image', mask);
     box.classList.add('avbox');
 }
-/** The still to show for a specialist in a card or stage: the portrait poster when its idle clip is portrait. */
-export const stillOf = (m) => (m.idleShape === 'tall' ? m.poster : m.face);
+/** The still to show for a specialist in a card or stage: the first frame of its idle clip. */
+export const stillOf = (m) => m.poster;
 /** Re-frame every element marked with data-key. */
 export function frameAll() {
     document.querySelectorAll('[data-key]').forEach((el) => {

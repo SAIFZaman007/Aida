@@ -7,7 +7,7 @@ import { renderDetail } from './detail.js';
 /** [translateX, translateY, rotate°, scale] per distance from the centre card. */
 const POSE = [[0, 0, 0, 1], [238, 62, 4, 0.84], [432, 148, 8, 0.72], [600, 246, 12, 0.62]];
 const DURATION = 7000;
-let idx = 3; // Non-stop sits in the middle of SPECIALISTS
+let idx = 3; // Aida sits in the middle of SPECIALISTS
 let timer = 0;
 let paused = false;
 function layout() {

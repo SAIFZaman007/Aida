@@ -7,7 +7,7 @@ import { features } from './sections/features.js';
 import { hero } from './sections/hero.js';
 import { howItWorks } from './sections/howItWorks.js';
 import { languages } from './sections/languages.js';
-import { brand, faq, maktech, marquee, stars } from './sections/misc.js';
+import { brand, faq, maktech, marquee } from './sections/misc.js';
 import { motion } from './sections/motion.js';
 import { nav } from './sections/nav.js';
 import { preloader } from './sections/preloader.js';
@@ -27,7 +27,6 @@ export function boot() {
   const ready = preloader();
   brand();
   nav();
-  stars();
   hero();
   marquee();
   problemFlow();
