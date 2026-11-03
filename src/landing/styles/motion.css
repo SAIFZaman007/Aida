@@ -10,7 +10,7 @@
 @keyframes gtShine{to{background-position:220% 0}}
 #scrollProg{position:fixed;left:0;top:0;height:2px;width:100%;z-index:100000;transform-origin:0 50%;transform:scaleX(0);background:linear-gradient(90deg,#FFE5B4,#FF7F24,#CC5500);box-shadow:0 0 10px rgb(255 127 36 / .8);pointer-events:none}
 .admin-bar #scrollProg{top:32px}
-footer .ghost.rv{letter-spacing:.35em;translate:0 40px;filter:none;transition:letter-spacing 1.4s cubic-bezier(.2,.8,.2,1),opacity 1.4s,translate 1.4s}
-footer .ghost.rv.in{letter-spacing:.06em;translate:0 0}
+footer .ghost.rv{translate:0 40px;filter:none;transition:opacity 1.4s,translate 1.4s cubic-bezier(.2,.8,.2,1)}
+footer .ghost.rv.in{translate:0 0}
 @media (max-width:560px){.sec{padding-block:72px}#problem{padding-bottom:20px}}
 @media (prefers-reduced-motion:reduce){.rv{opacity:1!important;translate:none!important;filter:none!important;scale:none!important}.gt{animation:none}}

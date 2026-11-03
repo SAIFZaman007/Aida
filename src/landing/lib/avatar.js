@@ -4,8 +4,6 @@ import { byKey } from '../data/specialists.js';
  * Every source frame is 16:9 (1280×720 still / 1920×1080 video). Each
  * specialist has `geo` = [faceCentreX, headTopY] as fractions of the frame.
  */
-const FRAME_W = 1280;
-const FRAME_H = 720;
 /** Zoom/offset per context: [zoom (frame height ÷ box height), head-top margin as fraction of box]. */
 function contextFor(el) {
     const p = el.parentElement;
@@ -69,13 +67,15 @@ export function frameAll() {
         frame(el, el.dataset.key);
     });
 }
-/** Circular face crop as a CSS background (for small round avatars). */
-export function paintFace(el, key, size) {
-    const [gx, gy] = byKey(key).media.geo;
-    const s = (size * 0.62) / (0.19 * FRAME_H);
-    el.style.backgroundImage = `url("${byKey(key).media.face}")`;
-    el.style.backgroundSize = `${FRAME_W * s}px auto`;
-    el.style.backgroundPosition = `${size / 2 - gx * FRAME_W * s}px ${-(gy * FRAME_H * s) + size * 0.17}px`;
+/**
+ * Round avatar: a square crop made for it (public/landing/faces/<key>.webp, 192 px, face centred,
+ * about 4x the largest circle, so it stays sharp on retina). `cover` + centre never cuts a face
+ * whatever the circle size.
+ */
+export function paintFace(el, key) {
+    el.style.backgroundImage = `url("${byKey(key).media.crop}")`;
+    el.style.backgroundSize = 'cover';
+    el.style.backgroundPosition = '50% 50%';
     el.style.backgroundRepeat = 'no-repeat';
     el.title = byKey(key).name;
 }

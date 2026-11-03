@@ -38,6 +38,7 @@ export function brandify(root = document.body) {
     if (last < text.length) frag.append(text.slice(last));
     if (wrap) {
       const w = document.createElement("span");
+      w.className = "aida-w";
       w.append(frag);
       n.replaceWith(w);
     } else n.replaceWith(frag);

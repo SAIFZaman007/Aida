@@ -8,7 +8,7 @@ export function howItWorks() {
     if (!cross)
         return;
     const faces = $('#pzFaces');
-    ORDER.forEach((k) => { const s = document.createElement('span'); faces.appendChild(s); paintFace(s, k, 34); });
+    ORDER.forEach((k) => { const s = document.createElement('span'); faces.appendChild(s); paintFace(s, k); });
     faces.children[0].classList.add('on');
     const wave = $('[data-wave]', cross);
     wave.innerHTML = Array.from({ length: Number(wave.dataset.wave) }, (_, i) => `<i style="animation-delay:-${(i * 0.11).toFixed(2)}s"></i>`).join('');
@@ -20,7 +20,7 @@ export function howItWorks() {
         r.className = 'pz-row';
         const f = document.createElement('span');
         f.className = 'f';
-        paintFace(f, k, 28);
+        paintFace(f, k);
         r.append(f);
         r.insertAdjacentHTML('beforeend', `<span>${byKey(k).name} · ${label}</span><em>${ago}</em>`);
         rows.prepend(r);

@@ -1,5 +1,6 @@
 import { brandify } from '../theme/brandText.js';
 import { frameAll } from './lib/avatar.js';
+import { fitWordmark } from './lib/fit.js';
 import { paintBars } from './lib/dom.js';
 import { paintIcons } from './lib/icons.js';
 import { features } from './sections/features.js';
@@ -40,6 +41,7 @@ export function boot() {
   paintBars();
   brand(); // logos injected by the sections above
   brandify(document.getElementById('landing')); // every "A.I.D.A" in the brand typeface
+  fitWordmark(); // the footer wordmark spans its container, whichever brand font loaded
   // Re-frame faces once images/fonts settle and on resize.
   setTimeout(frameAll, 300);
   setTimeout(frameAll, 1500);

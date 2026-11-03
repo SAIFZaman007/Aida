@@ -13,7 +13,7 @@ export function languages() {
     const box = $('.msgs', chat);
     const footer = $('.speaking', chat);
     const liveLabel = $('.lv', chat);
-    paintFace($('.who', chat), 'nonstop', 40);
+    paintFace($('.who', chat), 'nonstop');
     let gen = 0;
     let timers = [];
     let current = 'en';

@@ -24,7 +24,7 @@
 :root[data-theme='light'] .mak h2 .mak-link:hover,:root[data-theme='light'] .mak h2 .mak-link:focus-visible{text-shadow:none}
 /* orb caption, step badges and footer links */
 :root[data-theme='light'] .orb-cap{color:#8A5A0C;background:rgb(var(--s2-rgb) / .9);box-shadow:0 0 0 1px rgba(154,106,18,.4) inset}
-:root[data-theme='light'] .fgrid li a:hover,:root[data-theme='light'] .fgrid li a:focus-visible,:root[data-theme='light'] .fgrid li span:hover,
+:root[data-theme='light'] .fgrid li a:hover,:root[data-theme='light'] .fgrid li a:focus-visible,:root[data-theme='light'] .fgrid li > span:hover,
 :root[data-theme='light'] .legal .fl-mak:hover,:root[data-theme='light'] .legal .fl-mak:focus-visible{color:#B84A00;text-shadow:none}
 /* night-sky decoration has no place on a light page */
 :root[data-theme='light'] .star,:root[data-theme='light'] .beam{display:none}
@@ -35,3 +35,5 @@
 :root[data-theme='light'] .btn-primary{box-shadow:0 0 0 1px rgb(255 255 255 / .2) inset,0 2px 4px rgba(120,60,0,.25),0 14px 30px -12px rgb(204 85 0 / .55)}
 :root[data-theme='light'] .btn-ghost{box-shadow:0 0 0 1px var(--line-2) inset,0 2px 4px rgba(90,50,10,.12),0 14px 26px -16px rgba(90,50,10,.35)}
 :root[data-theme='light'] .chat.listening .top .live{color:#B84A00}
+:root[data-theme='light'] .fb-t small{background:linear-gradient(90deg,#9A6A12,#B3801F 55%,#7A4E08);-webkit-background-clip:text;background-clip:text;color:transparent}
+:root[data-theme='light'] .fb-t small::before{background:linear-gradient(90deg,rgba(154,106,18,.7),rgba(154,106,18,.25) 75%,transparent)}

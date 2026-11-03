@@ -52,10 +52,10 @@ export function problemFlow() {
         const inner = document.createElement('i');
         sp.appendChild(inner);
         orbit.appendChild(sp);
-        paintFace(inner, k, 46);
+        paintFace(inner, k);
     });
     const faces = $('#flFaces');
-    ORDER.forEach((k) => { const s = document.createElement('span'); faces.appendChild(s); paintFace(s, k, 40); });
+    ORDER.forEach((k) => { const s = document.createElement('span'); faces.appendChild(s); paintFace(s, k); });
     paintBars(f);
     // Benefits tick off one by one, then loop.
     const items = $$('.fl-item', f);

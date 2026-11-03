@@ -12,6 +12,8 @@ const media = (key, geo) => {
   const v = AVATARS[key].video;
   return {
     face: `${BASE}landing/face-${key}.jpg`,
+    /** Square head-and-shoulders crop, centred on the face, for the round avatars. */
+    crop: `${BASE}landing/faces/${key}.webp`,
     poster: v.poster,
     idle: v.idle,
     talk: v.talk,
@@ -117,7 +119,7 @@ export const SPECIALISTS = [
             { from: 'ai', text: 'Done. The deadline stays clear, the opening is softer and it ends with a next step they can say yes to.' },
             { from: 'you', text: 'এবার বাংলায় একটা ছোট ভার্সন দাও।', tr: 'Now give me a short version in Bengali.' },
         ],
-        media: media('writer', [0.43, 0.04]),
+        media: media('writer', [0.5, 0.047]),
     },
 ];
 /** Display order used by tabs, orbits and face rows. */

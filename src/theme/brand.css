@@ -30,3 +30,7 @@
   text-transform: none;
   white-space: nowrap;
 }
+/* The wrapper brandify() puts round a text run inside a flex/grid parent. Whatever generic span
+   rule a section has (display:flex on spans, say), the wrapper stays one inline text run, so the
+   spaces around the name are kept. */
+.aida-w { display: inline !important; }
