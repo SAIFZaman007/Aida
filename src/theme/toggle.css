@@ -1,0 +1,222 @@
+/*
+  Premium light / dark switch.
+  A gold-lined glass track, a spring-loaded orb that carries the moon (dark) or the sun (light),
+  twinkling stars in the dark, a warm glow in the light, and a slow gold orbit around the orb on hover.
+  It is driven by <html data-theme>, so it needs no extra state to look right.
+*/
+.tt {
+  --tt-w: 68px;
+  --tt-h: 34px;
+  --tt-pad: 4px;
+  --tt-k: 26px;
+  --tt-gold: #e6c06a;
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: var(--tt-w);
+  height: var(--tt-h);
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  isolation: isolate;
+}
+/* a larger invisible hit area: hover/click stay steady at the edges */
+.tt::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 999px;
+}
+.tt:focus-visible {
+  outline: 2px solid var(--tt-gold);
+  outline-offset: 4px;
+}
+
+.tt-track {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  background: linear-gradient(180deg, #110d0a, #231a13);
+  box-shadow:
+    inset 0 2px 7px rgb(0 0 0 / 0.75),
+    inset 0 -1px 0 rgb(255 214 150 / 0.08),
+    0 0 0 1px rgb(230 192 106 / 0.5),
+    0 8px 18px -8px rgb(0 0 0 / 0.85);
+  transition: background 0.6s, box-shadow 0.45s;
+}
+.tt:hover .tt-track,
+.tt:focus-visible .tt-track {
+  box-shadow:
+    inset 0 2px 7px rgb(0 0 0 / 0.75),
+    inset 0 -1px 0 rgb(255 214 150 / 0.1),
+    0 0 0 1px rgb(247 227 166 / 0.9),
+    0 0 0 4px rgb(230 192 106 / 0.14),
+    0 10px 24px -8px rgb(255 127 36 / 0.45);
+}
+
+/* dark: stars */
+.tt-stars i {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: #ffe9c4;
+  opacity: 0;
+  transition: opacity 0.5s;
+  animation: tt-twinkle 3.2s ease-in-out infinite;
+}
+.tt-stars i:nth-child(1) { left: 38px; top: 9px; animation-delay: 0s; }
+.tt-stars i:nth-child(2) { left: 48px; top: 20px; animation-delay: 0.7s; width: 1.5px; height: 1.5px; }
+.tt-stars i:nth-child(3) { left: 55px; top: 8px; animation-delay: 1.3s; }
+.tt-stars i:nth-child(4) { left: 44px; top: 25px; animation-delay: 2s; width: 1.5px; height: 1.5px; }
+.tt-stars i:nth-child(5) { left: 59px; top: 18px; animation-delay: 2.6s; }
+:root[data-theme='dark'] .tt-stars i,
+:root:not([data-theme]) .tt-stars i { opacity: 0.9; }
+@keyframes tt-twinkle {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(0.55); filter: brightness(0.6); }
+}
+
+/* light: a warm sun glow */
+.tt-glow {
+  position: absolute;
+  right: -10px;
+  top: -14px;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 190 110 / 0.85), rgb(255 150 60 / 0.25) 55%, transparent 72%);
+  opacity: 0;
+  transition: opacity 0.6s;
+}
+
+/* the two resting icons at the ends of the track */
+.tt-ico {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: opacity 0.4s, transform 0.5s;
+}
+.tt-ico-sun { right: 9px; color: #ffcf8a; opacity: 0.85; }
+.tt-ico-moon { left: 9px; color: #b4642a; opacity: 0; transform: scale(0.6); }
+
+/* the orb */
+.tt-knob {
+  position: absolute;
+  top: var(--tt-pad);
+  left: var(--tt-pad);
+  width: var(--tt-k);
+  height: var(--tt-k);
+  border-radius: 50%;
+  transform: translateX(0);
+  transition: transform 0.6s cubic-bezier(0.34, 1.5, 0.5, 1);
+  z-index: 2;
+}
+.tt-core {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #ffd9a3;
+  background: radial-gradient(circle at 32% 28%, #4a3a2c 0%, #1b140e 70%);
+  box-shadow:
+    0 0 0 1.5px rgb(230 192 106 / 0.85),
+    inset 0 1px 1px rgb(255 235 200 / 0.25),
+    0 4px 10px -2px rgb(0 0 0 / 0.8),
+    0 0 14px -2px rgb(255 127 36 / 0.4);
+  transition: background 0.5s, color 0.5s, box-shadow 0.5s;
+}
+.tt-k {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: opacity 0.35s, transform 0.6s cubic-bezier(0.34, 1.4, 0.5, 1);
+}
+.tt-k-moon { opacity: 1; transform: rotate(0) scale(1); fill: rgb(255 217 163 / 0.18); }
+.tt-k-sun { opacity: 0; transform: rotate(-90deg) scale(0.4); }
+/* a slow gold orbit around the orb on hover / focus */
+.tt-orbit {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0 55%, #fff1c4 75%, #e2b25a 88%, transparent 100%);
+  -webkit-mask: radial-gradient(circle, transparent 14px, #000 14.5px, #000 16px, transparent 16.5px);
+  mask: radial-gradient(circle, transparent 14px, #000 14.5px, #000 16px, transparent 16.5px);
+  opacity: 0;
+  transition: opacity 0.35s;
+}
+.tt:hover .tt-orbit,
+.tt:focus-visible .tt-orbit {
+  opacity: 1;
+  animation: tt-spin 2.8s linear infinite;
+}
+@keyframes tt-spin { to { transform: rotate(360deg); } }
+.tt:active .tt-knob { transition-duration: 0.2s; }
+.tt:active .tt-core { transform: scale(0.92); }
+.tt-core { transition: background 0.5s, color 0.5s, box-shadow 0.5s, transform 0.2s; }
+
+/* ── light mode ── */
+:root[data-theme='light'] .tt-track {
+  background: linear-gradient(180deg, #ffe9cc, #ffd4a0);
+  box-shadow:
+    inset 0 2px 6px rgb(140 70 10 / 0.25),
+    inset 0 -1px 0 rgb(255 255 255 / 0.6),
+    0 0 0 1px rgb(200 140 40 / 0.65),
+    0 8px 18px -8px rgb(120 60 0 / 0.35);
+}
+:root[data-theme='light'] .tt:hover .tt-track,
+:root[data-theme='light'] .tt:focus-visible .tt-track {
+  box-shadow:
+    inset 0 2px 6px rgb(140 70 10 / 0.25),
+    inset 0 -1px 0 rgb(255 255 255 / 0.6),
+    0 0 0 1px rgb(214 160 50 / 0.95),
+    0 0 0 4px rgb(255 127 36 / 0.16),
+    0 10px 24px -8px rgb(204 85 0 / 0.5);
+}
+:root[data-theme='light'] .tt-stars i { opacity: 0; }
+:root[data-theme='light'] .tt-glow { opacity: 1; }
+:root[data-theme='light'] .tt-ico-sun { opacity: 0; transform: scale(0.6); }
+:root[data-theme='light'] .tt-ico-moon { opacity: 0.9; transform: scale(1); }
+:root[data-theme='light'] .tt-knob { transform: translateX(calc(var(--tt-w) - var(--tt-k) - var(--tt-pad) * 2)); }
+:root[data-theme='light'] .tt-core {
+  color: #fff;
+  background: radial-gradient(circle at 32% 28%, #ff9a4d 0%, #e0640c 55%, #cc5500 100%);
+  box-shadow:
+    0 0 0 1.5px rgb(214 160 50 / 0.95),
+    inset 0 1px 1px rgb(255 255 255 / 0.35),
+    0 4px 10px -2px rgb(140 60 0 / 0.55),
+    0 0 16px -2px rgb(255 127 36 / 0.6);
+}
+:root[data-theme='light'] .tt-k-moon { opacity: 0; transform: rotate(90deg) scale(0.4); }
+:root[data-theme='light'] .tt-k-sun { opacity: 1; transform: rotate(0) scale(1); }
+
+/* view-transition: the theme change is a circular reveal (see theme.js) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) { z-index: 2; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tt-knob, .tt-core, .tt-track, .tt-k, .tt-ico { transition-duration: 0.01ms; }
+  .tt-stars i, .tt:hover .tt-orbit { animation: none; }
+}

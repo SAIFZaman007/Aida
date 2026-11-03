@@ -1,4 +1,7 @@
 import { useEffect } from "react";
+import "../theme/theme.css";
+import "../theme/brand.css";
+import "../theme/toggle.css";
 import "./styles/index.css";
 import { GOLD_DEFS } from "./lib/icons.js";
 import { MARKUP } from "./markup.js";

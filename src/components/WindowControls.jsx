@@ -23,7 +23,7 @@ export default function WindowControls() {
 
   if (!win) return null;
   const btn =
-    "app-no-drag flex h-9 w-10 items-center justify-center text-steel transition hover:bg-white/10 hover:text-white";
+    "app-no-drag flex h-9 w-10 items-center justify-center text-steel transition hover:bg-frost/10 hover:text-frost";
   return (
     <div className="app-no-drag ml-1 flex items-center">
       <button type="button" className={btn} onClick={() => win.minimize()} title="Minimise" aria-label="Minimise">

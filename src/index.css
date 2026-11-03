@@ -1,40 +1,46 @@
 @import 'tailwindcss';
+@import './theme/theme.css';
+@import './theme/brand.css';
+@import './theme/toggle.css';
 
 /*
   A.I.D.A design tokens.
-  Deep navy surfaces, ONE accent colour (violet) for everything interactive, and the
+  Warm charcoal / paper surfaces, ONE accent colour (matte orange) for everything interactive, and the
   brand cyan kept only for the logo glow, the live waveform and "listening" signals.
   (Component classes such as `bg-void-700` or `text-frost` keep their names; only the
   values changed, so every screen follows the same palette.)
 */
 @theme {
-  --color-void-600: #1a1f48;
-  --color-void-700: #11153a;
-  --color-void-800: #0b0e29;
-  --color-void-900: #060818;
+  /* Surfaces and text come from the shared tokens (src/theme/theme.css), so one switch re-colours
+     every class below (`bg-void-700`, `text-frost`, …) in light and dark. */
+  --color-void-600: rgb(var(--s4-rgb));
+  --color-void-700: rgb(var(--s3-rgb));
+  --color-void-800: rgb(var(--s2-rgb));
+  --color-void-900: rgb(var(--s0-rgb));
 
-  --color-glass: rgba(14, 18, 46, 0.58);
-  --color-line: rgba(150, 140, 255, 0.2);
+  --color-glass: rgb(var(--s2-rgb) / 0.58);
+  --color-line: rgb(var(--accent-soft-rgb) / 0.2);
 
-  --color-violet: #8b7bff;
-  --color-violet-soft: #b5a9ff;
-  --color-violet-dim: #5b4bd6;
-  --color-violet-deep: #3b2fa0;
+  /* ONE accent for everything interactive: premium matte orange */
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-ink);
+  --color-accent-dim: #cc5500;
+  --color-accent-deep: #8b4500;
 
   --color-cyan: #38e1ff;
   --color-cyan-dim: #0e7490;
   --color-cyan-deep: #155e6e;
 
   --color-crimson: #ff5d7a;
-  --color-frost: #eef0ff;
-  --color-steel: #99a2c8;
+  --color-frost: rgb(var(--fg-rgb));
+  --color-steel: rgb(var(--t3-rgb));
 
   --font-sans: 'Inter', 'Noto Sans Bengali', ui-sans-serif, system-ui, sans-serif;
   --font-hud: 'Inter', 'Noto Sans Bengali', ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Noto Sans Bengali', monospace;
 
-  --shadow-glow: 0 0 28px rgba(139, 123, 255, 0.32);
-  --shadow-glowsoft: 0 0 60px rgba(139, 123, 255, 0.16);
+  --shadow-glow: 0 0 28px rgb(var(--accent-rgb) / 0.32);
+  --shadow-glowsoft: 0 0 60px rgb(var(--accent-rgb) / 0.16);
   --shadow-glowcyan: 0 0 24px rgba(56, 225, 255, 0.28);
 
   --animate-ringspin: spin 24s linear infinite;
@@ -100,7 +106,7 @@
 }
 
 @utility panel {
-  /* Glass panel with a hairline violet edge. */
+  /* Glass panel with a hairline accent edge. */
   @apply rounded-xl border border-line bg-glass backdrop-blur-md;
 }
 
@@ -113,7 +119,7 @@
     position: absolute;
     width: 14px;
     height: 14px;
-    border-color: rgba(139, 123, 255, 0.7);
+    border-color: rgb(var(--accent-rgb) / 0.7);
   }
   &::before {
     top: -1px;
@@ -130,18 +136,18 @@
 }
 
 @utility label {
-  @apply font-hud text-[10px] font-semibold uppercase tracking-[0.24em] text-violet-soft/80;
+  @apply font-hud text-[10px] font-semibold uppercase tracking-[0.24em] text-accent-soft/80;
 }
 
 @utility select {
   /* Form control used across the Settings panel. */
-  @apply rounded-md border border-line bg-void-700 px-2 py-1 text-[12px] text-frost focus:border-violet/60 focus:outline-hidden;
+  @apply rounded-md border border-line bg-void-700 px-2 py-1 text-[12px] text-frost focus:border-accent/60 focus:outline-hidden;
 }
 
 @utility glass {
   /* Floating surface used by the rails, the dock and the landing navbar. */
-  background: rgba(12, 16, 42, 0.55);
-  border: 1px solid rgba(150, 140, 255, 0.22);
+  background: rgb(var(--s2-rgb) / 0.55);
+  border: 1px solid rgb(var(--accent-soft-rgb) / 0.22);
   -webkit-backdrop-filter: blur(18px) saturate(140%);
   backdrop-filter: blur(18px) saturate(140%);
 }
@@ -154,10 +160,6 @@
 }
 
 /* Global styles: kept outside any @layer (as in the Tailwind v3 setup) so they keep their precedence. */
-:root {
-  color-scheme: dark;
-}
-
 html,
 body,
 #root {
@@ -166,12 +168,12 @@ body,
 }
 
 body {
-  background-color: #060818;
-  color: #eef0ff;
+  background-color: rgb(var(--s0-rgb));
+  color: rgb(var(--fg-rgb));
   font-family: 'Inter', 'Noto Sans Bengali', ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   background-image:
-    radial-gradient(1100px 620px at 50% -12%, rgba(139, 123, 255, 0.16), transparent 62%),
+    radial-gradient(1100px 620px at 50% -12%, var(--page-glow), transparent 62%),
     radial-gradient(900px 560px at 100% 100%, rgba(56, 225, 255, 0.07), transparent 60%);
   background-attachment: fixed;
 }
@@ -186,11 +188,11 @@ body.app-locked {
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(139, 123, 255, 0.3);
+  background: rgb(var(--accent-rgb) / 0.35);
   border-radius: 99px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 123, 255, 0.5);
+  background: rgb(var(--accent-rgb) / 0.55);
 }
 
 /* Electron (frameless window): the top bar drags the window, its buttons do not. */
@@ -215,7 +217,7 @@ body.app-locked {
   .caret::after {
     content: '▋';
     margin-left: 2px;
-    color: #8b7bff;
+    color: var(--accent);
     animation: blink 1s step-end infinite;
   }
 }
@@ -258,10 +260,10 @@ body.app-locked {
 /* Real-Time Reading Progress Highlighter — the segment of the streaming
    bubble currently being spoken by the avatar. */
 .reading-highlight {
-  background-color: rgba(139, 123, 255, 0.28);
-  color: #ffffff;
+  background-color: rgb(var(--accent-rgb) / 0.3);
+  color: rgb(var(--fg-rgb));
   border-radius: 3px;
-  box-shadow: 0 0 0 1px rgba(139, 123, 255, 0.3);
+  box-shadow: 0 0 0 1px rgb(var(--accent-rgb) / 0.35);
   padding: 0 1px;
   transition: background-color 160ms ease-out, box-shadow 160ms ease-out, color 160ms ease-out;
   scroll-margin-block: 96px;

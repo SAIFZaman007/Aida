@@ -6,9 +6,9 @@
 .rv.in{opacity:1;translate:0 0;filter:none;scale:1}
 .eyebrow.rv::before,.eyebrow.rv::after{transition:width 1s .3s cubic-bezier(.2,.8,.2,1);width:0}
 .eyebrow.rv.in::before,.eyebrow.rv.in::after{width:40px}
-.gt{background-image:linear-gradient(92deg,#DCD7FF 0%,#B3A8FF 22%,#8B7CFF 45%,#C9C2FF 62%,#8B7CFF 80%,#DCD7FF 100%);background-size:220% auto;animation:gtShine 7s linear infinite}
+.gt{background-image:linear-gradient(92deg,#FFE5B4 0%,#FFA45C 22%,#FF7F24 45%,#FFB877 62%,#FF7F24 80%,#FFE5B4 100%);background-size:220% auto;animation:gtShine 7s linear infinite}
 @keyframes gtShine{to{background-position:220% 0}}
-#scrollProg{position:fixed;left:0;top:0;height:2px;width:100%;z-index:100000;transform-origin:0 50%;transform:scaleX(0);background:linear-gradient(90deg,#5FD4EC,#8B7CFF,#B3A8FF);box-shadow:0 0 10px rgba(139,124,255,.8);pointer-events:none}
+#scrollProg{position:fixed;left:0;top:0;height:2px;width:100%;z-index:100000;transform-origin:0 50%;transform:scaleX(0);background:linear-gradient(90deg,#FFE5B4,#FF7F24,#CC5500);box-shadow:0 0 10px rgb(255 127 36 / .8);pointer-events:none}
 .admin-bar #scrollProg{top:32px}
 footer .ghost.rv{letter-spacing:.35em;translate:0 40px;filter:none;transition:letter-spacing 1.4s cubic-bezier(.2,.8,.2,1),opacity 1.4s,translate 1.4s}
 footer .ghost.rv.in{letter-spacing:.06em;translate:0 0}

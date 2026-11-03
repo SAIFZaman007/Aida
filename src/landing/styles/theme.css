@@ -1,0 +1,37 @@
+/* Light theme refinements. Everything here is scoped to [data-theme='light'] so dark is untouched.
+   Tokens do most of the work; these rules cover what a token swap cannot: pale gold and gradient
+   text that vanish on cream, decorative night-sky layers, and heavy black shadows. */
+:root[data-theme='light']{
+  --gold:#9A6A12;
+  --gold-2:#8A5A0C;
+  --gold-3:#7A4E08;
+  --gold-glow:rgba(190,130,40,.32);
+  --line-2:rgba(150,100,30,.28);
+}
+/* headline gradient: keep every stop dark enough to read on cream */
+:root[data-theme='light'] .gt{background-image:linear-gradient(92deg,#B84A00 0%,#E8650C 28%,#CC5500 55%,#F07A1E 78%,#B84A00 100%);background-size:220% auto}
+/* nav subtitle + brand lines */
+:root[data-theme='light'] .tbt small{background:linear-gradient(90deg,#9A6A12,#B3801F 55%,#7A4E08);-webkit-background-clip:text;background-clip:text}
+:root[data-theme='light'] .tbt small::before{background:linear-gradient(90deg,rgba(154,106,18,.7),rgba(154,106,18,.25) 70%,transparent)}
+/* soft chips and tags */
+:root[data-theme='light'] .btn-soon em,
+:root[data-theme='light'] .plat span.soon b,
+:root[data-theme='light'] .pill .tag,
+:root[data-theme='light'] .hero-meta .soon-chip{background:rgba(190,130,40,.14);color:#8A5A0C}
+:root[data-theme='light'] .hero-meta .soon-chip{box-shadow:inset 0 0 0 1px rgba(154,106,18,.4)}
+/* the word "Maktech" in the Maktech headline */
+:root[data-theme='light'] .mak h2 .mak-link{color:#B84A00;text-decoration-color:rgba(184,74,0,.5)}
+:root[data-theme='light'] .mak h2 .mak-link:hover,:root[data-theme='light'] .mak h2 .mak-link:focus-visible{text-shadow:none}
+/* orb caption, step badges and footer links */
+:root[data-theme='light'] .orb-cap{color:#8A5A0C;background:rgb(var(--s2-rgb) / .9);box-shadow:0 0 0 1px rgba(154,106,18,.4) inset}
+:root[data-theme='light'] .fgrid li a:hover,:root[data-theme='light'] .fgrid li a:focus-visible,:root[data-theme='light'] .fgrid li span:hover,
+:root[data-theme='light'] .legal .fl-mak:hover,:root[data-theme='light'] .legal .fl-mak:focus-visible{color:#B84A00;text-shadow:none}
+/* night-sky decoration has no place on a light page */
+:root[data-theme='light'] .star,:root[data-theme='light'] .beam{display:none}
+/* shadows: warm and light instead of black */
+:root[data-theme='light'] .hcard{box-shadow:0 0 0 1px rgb(var(--w-rgb) / .1) inset,0 24px 50px -26px rgba(90,50,10,.45)}
+:root[data-theme='light'] .btn-primary:hover{box-shadow:0 0 0 1px rgb(255 255 255 / .25) inset,0 2px 4px rgba(120,60,0,.25),0 20px 40px -10px var(--gold-glow)}
+:root[data-theme='light'] .hero-bg{background:radial-gradient(60% 50% at 50% 0%,rgb(240 112 24 / .14),transparent 70%)}
+:root[data-theme='light'] .btn-primary{box-shadow:0 0 0 1px rgb(255 255 255 / .2) inset,0 2px 4px rgba(120,60,0,.25),0 14px 30px -12px rgb(204 85 0 / .55)}
+:root[data-theme='light'] .btn-ghost{box-shadow:0 0 0 1px var(--line-2) inset,0 2px 4px rgba(90,50,10,.12),0 14px 26px -16px rgba(90,50,10,.35)}
+:root[data-theme='light'] .chat.listening .top .live{color:#B84A00}

@@ -1,0 +1,68 @@
+/*
+  A.I.D.A theme tokens — ONE source for the landing page and the assistant.
+  Both screens import this file; each keeps its own stylesheet and only reads these variables.
+
+  Brand accent : premium matte orange  #CC5500 (deep) / #FF7F24 (bright), with soft + pale tints.
+  Surfaces     : warm charcoal in dark mode, warm paper in light mode (s0 = page … s5 = most raised).
+  Colours that need an alpha are stored as space-separated channels (--x-rgb) and used as
+  rgb(var(--x-rgb) / .5), so one token serves every transparency.
+  The theme is chosen with <html data-theme="dark|light"> (see theme.js; an inline script in
+  index.html sets it before the first paint, so there is never a flash).
+*/
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --accent: #ff7f24;
+  --accent-rgb: 255 127 36;
+  --accent-deep: #cc5500;
+  --accent-deep-rgb: 204 85 0;
+  --accent-soft: #ffa45c;
+  --accent-soft-rgb: 255 164 92;
+  --accent-pale: #ffe5b4;
+  --accent-ink: #ffa45c; /* the accent as TEXT / icons on a surface */
+  --on-accent: #ffffff; /* text on an accent fill */
+
+  --s0-rgb: 11 9 7;
+  --s1-rgb: 16 13 11;
+  --s2-rgb: 22 18 15;
+  --s3-rgb: 29 24 20;
+  --s4-rgb: 38 31 25;
+  --s5-rgb: 53 43 34;
+
+  --fg-rgb: 246 241 234; /* strong text */
+  --fg2-rgb: 227 218 208;
+  --t3-rgb: 163 154 143; /* muted */
+  --t4-rgb: 111 102 92; /* dim */
+  --w-rgb: 255 244 230; /* neutral overlay: glass fills and hairlines */
+
+  --scrim-rgb: 6 5 4; /* always dark: sits on photos / video */
+  --page-glow: rgb(var(--accent-rgb) / 0.16);
+  --nav-hover-bg: rgb(255 255 255 / 0.07);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --accent-ink: #b84a00;
+
+  --s0-rgb: 247 241 233;
+  --s1-rgb: 251 247 242;
+  --s2-rgb: 255 255 255;
+  --s3-rgb: 255 252 248;
+  --s4-rgb: 241 232 220;
+  --s5-rgb: 226 212 194;
+
+  --fg-rgb: 27 20 16;
+  --fg2-rgb: 46 36 29;
+  --t3-rgb: 107 95 84;
+  --t4-rgb: 142 129 116;
+  --w-rgb: 60 30 0;
+
+  --page-glow: rgb(var(--accent-rgb) / 0.14);
+  --nav-hover-bg: rgb(60 30 0 / 0.06);
+}
+
+/* Stage backdrop brightness (blurred poster behind the avatar) */
+:root{--stage-dim:.55}
+:root[data-theme='light']{--stage-dim:.97}

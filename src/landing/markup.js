@@ -1,4 +1,5 @@
 /* The landing page markup (preloader + page). Rendered once by Landing.jsx, then brought to life by boot.js. */
+import { TOGGLE_HTML } from '../theme/theme.js';
 export const MARKUP = `
 <!-- ============ PRELOADER ============ -->
 <div id="aida-pre" aria-hidden="true">
@@ -22,7 +23,10 @@ export const MARKUP = `
     <nav class="tl" aria-label="Main">
       <a href="/" data-go="problem">Problem</a><a href="/" data-go="specialists">Specialists</a><a href="/" data-go="features">Features</a><a href="/" data-go="languages">Languages</a><a href="/" data-go="maktech">Maktech</a>
     </nav>
-    <a class="tc" data-app href="/app">Launch A.I.D.A</a>
+    <div class="tr">
+      <button class="tt" type="button" role="switch" aria-checked="false" aria-label="Switch theme" data-theme-toggle>${TOGGLE_HTML}</button>
+      <a class="tc" data-app href="/app"><span class="tc-in">Launch A.I.D.A</span></a>
+    </div>
   </div></div>
 </header>
 
@@ -128,7 +132,7 @@ export const MARKUP = `
     <div class="bento">
       <div class="tile w2 glow">
         <span class="tic"><svg class="i" data-i="video"></svg></span>
-        <h3>Talking video avatars</h3>
+        <h3>Talking avatars</h3>
         <p>Every specialist has a face. It waits, smiles and speaks back. Idle and talking clips swap without a seam.</p>
         <div class="vis trio">
           <div class="ph" data-face="executive"><span class="st">IDLE</span></div>
@@ -142,7 +146,7 @@ export const MARKUP = `
         <p>Turn the mic on and just talk. Speak over A.I.D.A at any moment and it stops to listen, like a real conversation.</p>
         <div class="vis">
           <div class="wave-big" id="wavebig"><span class="cut" style="left:62%"><b>YOU INTERRUPT</b></span></div>
-          <div class="legend"><span><i style="background:var(--violet)"></i>A.I.D.A speaking</span><span><i style="background:var(--cyan)"></i>You speaking</span></div>
+          <div class="legend"><span><i style="background:var(--accent)"></i>A.I.D.A speaking</span><span><i style="background:var(--cyan)"></i>You speaking</span></div>
         </div>
       </div>
       <div class="tile"><span class="tic"><svg class="i" data-i="globe"></svg></span><h3>Bilingual voice</h3><p>Answers in the language you used, in the script you used, and reads it aloud.</p></div>

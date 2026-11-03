@@ -1,12 +1,12 @@
 /* Closing CTA + footer */
 .cta{overflow:hidden}
-.cta::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(42% 46% at 50% 48%,rgba(139,124,255,.16),transparent 72%)}
-.cta-orb{width:120px;height:120px;margin:0 auto 40px;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#2F2A70,#0C0D22 70%);box-shadow:0 0 0 1px rgba(179,168,255,.45) inset,0 0 80px rgba(139,124,255,.55)}
+.cta::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(42% 46% at 50% 48%,rgb(255 127 36 / .16),transparent 72%)}
+.cta-orb{width:120px;height:120px;margin:0 auto 40px;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#5E3C25,rgb(var(--s2-rgb)) 70%);box-shadow:0 0 0 1px rgb(255 164 92 / .45) inset,0 0 80px rgb(255 127 36 / .55)}
 .cta-orb .atom-svg{width:84px;height:84px}
 .cta-atom-host{display:grid;place-items:center}
-.co-ring{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 1px rgba(179,168,255,.45);animation:orbPulse 3.6s ease-out infinite}
+.co-ring{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 1px rgb(255 164 92 / .45);animation:orbPulse 3.6s ease-out infinite}
 .co-ring.r2{animation-delay:1.2s}.co-ring.r3{animation-delay:2.4s}
-.cta-orb::after{content:"";position:absolute;inset:-14px;border-radius:50%;background:conic-gradient(from 0deg,transparent 0 65%,rgba(179,168,255,.9) 85%,transparent 95%);-webkit-mask:radial-gradient(circle,transparent 72px,#000 73px,#000 75px,transparent 76px);mask:radial-gradient(circle,transparent 72px,#000 73px,#000 75px,transparent 76px);animation:atSpin 4s linear infinite}
+.cta-orb::after{content:"";position:absolute;inset:-14px;border-radius:50%;background:conic-gradient(from 0deg,transparent 0 65%,rgb(255 164 92 / .9) 85%,transparent 95%);-webkit-mask:radial-gradient(circle,transparent 72px,#000 73px,#000 75px,transparent 76px);mask:radial-gradient(circle,transparent 72px,#000 73px,#000 75px,transparent 76px);animation:atSpin 4s linear infinite}
 .btn-soon{cursor:default;opacity:.85;gap:8px}
-.btn-soon em{font-style:normal;font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;background:rgba(139,124,255,.2);color:#D9D4FF;letter-spacing:.02em}
-footer a:hover{color:#fff}
+.btn-soon em{font-style:normal;font-size:11px;font-weight:600;padding:3px 8px;border-radius:999px;background:rgb(255 127 36 / .2);color:#FFDDB0;letter-spacing:.02em}
+footer a:hover{color:rgb(var(--fg-rgb))}

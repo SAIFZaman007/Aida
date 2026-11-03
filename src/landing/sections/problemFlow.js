@@ -8,11 +8,11 @@ function wire(id, dir) {
     const d = 'M0 70 C 70 70, 90 32, 150 32 S 230 108, 300 70';
     const [a, b] = dir === 'in' ? ['.15', '1'] : ['1', '.15'];
     return `<svg class="fl-wire ${dir}" viewBox="0 0 300 140" preserveAspectRatio="none" aria-hidden="true">
-    <defs><linearGradient id="${id}g" x1="0" x2="1"><stop offset="0" stop-color="#8B7CFF" stop-opacity="${a}"/><stop offset="1" stop-color="#B3A8FF" stop-opacity="${b}"/></linearGradient></defs>
-    <path id="${id}" d="${d}" fill="none" stroke="rgba(170,170,255,.12)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+    <defs><linearGradient id="${id}g" x1="0" x2="1"><stop offset="0" stop-color="#FF7F24" stop-opacity="${a}"/><stop offset="1" stop-color="#FFA45C" stop-opacity="${b}"/></linearGradient></defs>
+    <path id="${id}" d="${d}" fill="none" stroke="rgba(255,190,130,.16)" stroke-width="2" vector-effect="non-scaling-stroke"/>
     <path class="flow-dash" d="${d}" fill="none" stroke="url(#${id}g)" stroke-width="2.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
     <circle r="4" fill="#fff" class="fl-dot"><animateMotion dur="2.6s" repeatCount="indefinite"><mpath href="#${id}"/></animateMotion></circle>
-    <circle r="3" fill="#B3A8FF" class="fl-dot"><animateMotion dur="2.6s" begin="1.3s" repeatCount="indefinite"><mpath href="#${id}"/></animateMotion></circle>
+    <circle r="3" fill="#FFA45C" class="fl-dot"><animateMotion dur="2.6s" begin="1.3s" repeatCount="indefinite"><mpath href="#${id}"/></animateMotion></circle>
   </svg>`;
 }
 /** Problem section: scattered tools → animated A.I.D.A brain → benefits checklist. */

@@ -1,52 +1,52 @@
 /* How it works: animated panels + atom */
 .cross .panel{position:relative;overflow:hidden;transition:box-shadow .5s,background .5s}
-.cross .panel.on{box-shadow:0 0 0 1px rgba(139,124,255,.55) inset,0 0 40px -10px rgba(139,124,255,.55)}
+.cross .panel.on{box-shadow:0 0 0 1px rgb(255 127 36 / .55) inset,0 0 40px -10px rgb(255 127 36 / .55)}
 .pz{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:16px;padding:18px;z-index:1}
-.pz-sweep{position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,transparent 30%,rgba(179,168,255,.16) 50%,transparent 70%);transform:translateX(-110%)}
+.pz-sweep{position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,transparent 30%,rgb(255 164 92 / .16) 50%,transparent 70%);transform:translateX(-110%)}
 .panel.on .pz-sweep{animation:pzSweep 1.6s ease-out}
 @keyframes pzSweep{to{transform:translateX(110%)}}
 .pz-team{flex-direction:column;gap:12px}
 .pz-faces{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;max-width:172px}
-.pz-faces span{width:34px;height:34px;border-radius:50%;background-color:#1A1830;box-shadow:0 0 0 2px #0B0C1B,0 0 0 3px rgba(170,170,255,.15);opacity:.55;transition:all .4s}
-.pz-faces span.on{opacity:1;transform:scale(1.18);box-shadow:0 0 0 2px #0B0C1B,0 0 0 3.5px var(--violet),0 0 18px rgba(139,124,255,.8)}
-.pz-team small,.pz-k{font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;color:var(--violet-2);text-transform:uppercase}
+.pz-faces span{width:34px;height:34px;border-radius:50%;background-color:rgb(var(--s4-rgb));box-shadow:0 0 0 2px rgb(var(--s1-rgb)),0 0 0 3px rgb(255 190 130 / .15);opacity:.55;transition:all .4s}
+.pz-faces span.on{opacity:1;transform:scale(1.18);box-shadow:0 0 0 2px rgb(var(--s1-rgb)),0 0 0 3.5px var(--accent),0 0 18px rgb(255 127 36 / .8)}
+.pz-team small,.pz-k{font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;color:var(--accent-ink);text-transform:uppercase}
 .pz-mic{padding:20px 32px;gap:26px}
-.pz-micbtn{position:relative;width:66px;height:66px;flex:none;border-radius:50%;display:grid;place-items:center;color:#fff;background:radial-gradient(circle at 50% 35%,#3A2F9A,#16123F 70%);box-shadow:0 0 0 2px rgba(139,124,255,.7) inset,0 0 30px rgba(139,124,255,.5)}
+.pz-micbtn{position:relative;width:66px;height:66px;flex:none;border-radius:50%;display:grid;place-items:center;color:#fff;background:radial-gradient(circle at 50% 35%,#814D2A,#362217 70%);box-shadow:0 0 0 2px rgb(255 127 36 / .7) inset,0 0 30px rgb(255 127 36 / .5)}
 .pz-micbtn svg{width:24px;height:24px}
-.pz-micbtn i{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 1px rgba(179,168,255,.6);animation:micPulse 2.4s ease-out infinite}
+.pz-micbtn i{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 1px rgb(255 164 92 / .6);animation:micPulse 2.4s ease-out infinite}
 .pz-micbtn i+i{animation-delay:1.2s}
 @keyframes micPulse{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.4);opacity:0}}
 .pz-mr{flex:0 1 250px;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:12px}
 .pz-wave{width:100%;height:40px;display:flex;align-items:center;justify-content:space-between}
-.pz-wave i{flex:0 0 4px;height:100%;border-radius:3px;background:linear-gradient(180deg,#9DE9F7,var(--violet-2));animation:pzBar 1.1s ease-in-out infinite;transform-origin:50% 50%}
+.pz-wave i{flex:0 0 4px;height:100%;border-radius:3px;background:linear-gradient(180deg,#FFE5B4,var(--accent-ink));animation:pzBar 1.1s ease-in-out infinite;transform-origin:50% 50%}
 @keyframes pzBar{0%,100%{transform:scaleY(.15)}50%{transform:scaleY(1)}}
-.pz-type{width:100%;min-height:1.5em;margin:0;padding:7px 12px;border-radius:10px;background:rgba(255,255,255,.04);box-shadow:inset 0 0 0 1px var(--line);font-size:13px;line-height:1.5;color:#D9DAEA;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pz-type{width:100%;min-height:1.5em;margin:0;padding:7px 12px;border-radius:10px;background:rgb(var(--w-rgb) / .04);box-shadow:inset 0 0 0 1px var(--line);font-size:13px;line-height:1.5;color:rgb(var(--fg2-rgb));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pz-type #pzType{font-family:var(--f-bn),var(--f-body)}
-.pz-type b{color:var(--violet-2);font-weight:400;animation:pzBlink 1s steps(1) infinite}
+.pz-type b{color:var(--accent-ink);font-weight:400;animation:pzBlink 1s steps(1) infinite}
 @keyframes pzBlink{50%{opacity:0}}
 .pz-say{flex-direction:column;gap:10px;padding:16px}
-.pz-bub{width:100%;padding:12px;border-radius:14px 14px 14px 4px;background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px var(--line-2);display:flex;flex-direction:column;gap:7px}
-.pz-bub small{display:flex;align-items:center;justify-content:space-between;font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em;color:var(--violet-2)}
-.pz-bub .bars{height:12px}.pz-bub .bars i{background:var(--violet-2);animation:flBar 1s ease-in-out infinite}
+.pz-bub{width:100%;padding:12px;border-radius:14px 14px 14px 4px;background:rgb(var(--w-rgb) / .05);box-shadow:inset 0 0 0 1px var(--line-2);display:flex;flex-direction:column;gap:7px}
+.pz-bub small{display:flex;align-items:center;justify-content:space-between;font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em;color:var(--accent-ink)}
+.pz-bub .bars{height:12px}.pz-bub .bars i{background:var(--accent-ink);animation:flBar 1s ease-in-out infinite}
 .pz-bub .bars i:nth-child(2n){animation-delay:.25s}
-.pz-bub .l{height:7px;border-radius:4px;background:linear-gradient(90deg,var(--violet-2),rgba(139,124,255,.35));transform-origin:0 50%;animation:pzLine 4.5s ease-out infinite}
+.pz-bub .l{height:7px;border-radius:4px;background:linear-gradient(90deg,var(--accent-ink),rgb(255 127 36 / .35));transform-origin:0 50%;animation:pzLine 4.5s ease-out infinite}
 .pz-bub .l2{width:85%;animation-delay:.6s}.pz-bub .l3{width:60%;animation-delay:1.2s}
 @keyframes pzLine{0%{transform:scaleX(0);opacity:.3}25%,80%{transform:scaleX(1);opacity:1}100%{transform:scaleX(1);opacity:0}}
 .pz-lang{font-style:normal;font-size:12px;color:var(--muted)}
-.pz-lang span{transition:color .4s}.pz-lang span.on{color:#fff}
+.pz-lang span{transition:color .4s}.pz-lang span.on{color:rgb(var(--fg-rgb))}
 .pz-hist{flex-direction:column;align-items:stretch;justify-content:center;gap:8px;padding:18px 26px}
 .pz-rows{display:flex;flex-direction:column;gap:7px}
-.pz-row{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:11px;background:rgba(255,255,255,.035);box-shadow:inset 0 0 0 1px var(--line);font-size:12.5px;color:#C9CADC;animation:pzIn .5s ease-out}
-.pz-row:first-child{background:rgba(139,124,255,.12);box-shadow:inset 0 0 0 1px rgba(139,124,255,.4);color:#fff}
-.pz-row span.f{width:28px;height:28px;border-radius:50%;flex:none;background-color:#1A1830}
+.pz-row{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:11px;background:rgb(var(--w-rgb) / .035);box-shadow:inset 0 0 0 1px var(--line);font-size:12.5px;color:rgb(var(--fg2-rgb));animation:pzIn .5s ease-out}
+.pz-row:first-child{background:rgb(255 127 36 / .12);box-shadow:inset 0 0 0 1px rgb(255 127 36 / .4);color:rgb(var(--fg-rgb))}
+.pz-row span.f{width:28px;height:28px;border-radius:50%;flex:none;background-color:rgb(var(--s4-rgb))}
 .pz-row em{margin-left:auto;font-style:normal;font-family:var(--f-mono);font-size:10px;color:var(--dim)}
 @keyframes pzIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
 .cross .step .sic{transition:transform .4s,filter .4s}
-.cross .step.on .sic{transform:translateY(-3px) scale(1.15);filter:drop-shadow(0 0 10px rgba(139,124,255,.9))}
-.cross .step.on .no{color:#fff;background:var(--violet);box-shadow:none}
+.cross .step.on .sic{transform:translateY(-3px) scale(1.15);filter:drop-shadow(0 0 10px rgb(255 127 36 / .9))}
+.cross .step.on .no{color:#fff;background:var(--accent);box-shadow:none}
 /* atom */
 .core{position:relative;animation:coreGlow 4s ease-in-out infinite}
-@keyframes coreGlow{0%,100%{box-shadow:0 0 0 1px rgba(255,255,255,.12) inset,0 30px 80px -10px rgba(124,108,255,.5)}50%{box-shadow:0 0 0 1px rgba(255,255,255,.18) inset,0 30px 110px -6px rgba(124,108,255,.9)}}
+@keyframes coreGlow{0%,100%{box-shadow:0 0 0 1px rgb(var(--w-rgb) / .12) inset,0 30px 80px -10px rgb(240 112 24 / .5)}50%{box-shadow:0 0 0 1px rgb(var(--w-rgb) / .18) inset,0 30px 110px -6px rgb(240 112 24 / .9)}}
 .core .in.atom{position:relative;overflow:hidden}
 .atom-svg{width:118px;height:118px;overflow:visible}
 .at-spin{animation:atSpin 18s linear infinite}

@@ -101,12 +101,12 @@ function Layer({ avatar, speaking, fading }) {
           alt=""
           draggable={false}
           className="absolute inset-0 h-full w-full scale-125 object-cover opacity-70"
-          style={{ filter: "blur(48px) brightness(0.55) saturate(1.15)" }}
+          style={{ filter: "blur(48px) brightness(var(--stage-dim, 0.55)) saturate(1.15)" }}
         />
       ) : (
         <div
           className="absolute inset-0"
-          style={{ background: "radial-gradient(60% 70% at 50% 38%, #2f3190 0%, #14173f 55%, #080a22 100%)" }}
+          style={{ background: "radial-gradient(60% 70% at 50% 38%, rgb(var(--s4-rgb)) 0%, rgb(var(--s2-rgb)) 55%, rgb(var(--s0-rgb)) 100%)" }}
         />
       )}
       <div className="stage-figure">
@@ -145,7 +145,7 @@ function Layer({ avatar, speaking, fading }) {
         ) : (
           // No clips yet: the portrait, framed head-to-waist. `multiply` lets a studio-white
           // background take the colour of the stage instead of showing as a white block.
-          <div style={{ background: "radial-gradient(55% 45% at 50% 22%, #8d84ff 0%, #4a4fc4 45%, #1c2060 100%)" }}>
+          <div style={{ background: "radial-gradient(55% 45% at 50% 22%, #ffa45c 0%, #cc5500 45%, #5a2600 100%)" }}>
             <img
               src={avatar.still}
               alt=""

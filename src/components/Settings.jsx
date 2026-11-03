@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSettings, updateSettings } from "../lib/settings.js";
 import { allAvatars } from "../lib/avatars.js";
+import Aida from "../theme/Aida.jsx";
 
 /*
   Settings — a clean, scalable preferences panel.
@@ -47,7 +48,7 @@ export default function Settings({ open, onClose, model = "—", online = false 
       >
         <div className="mb-5 flex items-center justify-between">
           <h2 className="font-hud text-lg uppercase tracking-[0.25em] text-frost">Settings</h2>
-          <button onClick={onClose} className="text-steel hover:text-violet">
+          <button onClick={onClose} className="text-steel hover:text-accent">
             ✕
           </button>
         </div>
@@ -56,10 +57,10 @@ export default function Settings({ open, onClose, model = "—", online = false 
         <section className="mb-6 space-y-3">
           <p className="label">Brain</p>
           <Row label="Model">
-            <span className="font-sans text-[12px] text-violet">{model}</span>
+            <span className="font-sans text-[12px] text-accent">{model}</span>
           </Row>
           <Row label="Status">
-            <span className={"font-sans text-[12px] " + (online ? "text-violet" : "text-steel")}>
+            <span className={"font-sans text-[12px] " + (online ? "text-accent" : "text-steel")}>
               {online ? "online" : "offline"}
             </span>
           </Row>
@@ -191,7 +192,7 @@ export default function Settings({ open, onClose, model = "—", online = false 
             />
           </Row>
           <p className="font-sans text-[10px] text-steel/60">
-            In voice mode AIDA listens continuously; speaking over the avatar stops it
+            In voice mode <Aida>AIDA</Aida> listens continuously; speaking over the avatar stops it
             instantly. Headphones recommended to prevent echo.
           </p>
         </section>
@@ -215,7 +216,7 @@ function Toggle({ on, onClick }) {
       onClick={onClick}
       className={
         "h-6 w-11 rounded-full border transition " +
-        (on ? "border-violet/60 bg-violet/30" : "border-line bg-void-700")
+        (on ? "border-accent/60 bg-accent/30" : "border-line bg-void-700")
       }
     >
       <span

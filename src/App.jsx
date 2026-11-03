@@ -13,6 +13,9 @@ import { useSettings, updateSettings } from "./lib/settings.js";
 import { avatarForPersona, DEFAULT_PERSONA } from "./lib/avatars.js";
 import { MODE_LABEL } from "./lib/modes.js";
 import { BRAND } from "./lib/brand.js";
+import Aida from "./theme/Aida.jsx";
+import ThemeToggle from "./theme/ThemeToggle.jsx";
+import BrandLink from "./components/BrandLink.jsx";
 
 const LIVE_PROJECT = "Live Session"; // where sessions started from the mic / chat buttons go
 const isTyping = (el) =>
@@ -317,43 +320,44 @@ export default function App() {
       <VideoStage avatar={avatar} activity={activity} />
 
       {/* Soft scrims keep the text readable over any frame of the video. */}
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(6,8,24,0.78)_0%,rgba(6,8,24,0.42)_30%,rgba(6,8,24,0)_58%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgb(var(--s0-rgb)/0.78)_0%,rgb(var(--s0-rgb)/0.42)_30%,rgb(var(--s0-rgb)/0)_58%)]" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[46%] bg-gradient-to-t from-void-900 via-void-900/70 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-void-900/80 to-transparent" />
 
       {/* ── Top bar: logo · mode · settings · window controls ── */}
       <header className={"absolute inset-x-0 top-0 z-30 flex h-[72px] items-center justify-between pl-5 pr-2 " + (desktop ? "app-drag" : "")}>
-        <div className="flex items-center gap-3.5">
+        <BrandLink desktop={desktop}>
           <img
             src={BRAND.mark}
-            alt="A.I.D.A logo"
+            alt={desktop ? "A.I.D.A logo" : ""}
             width={46}
             height={46}
-            className="h-[46px] w-[46px] rounded-xl border border-violet/40 object-cover shadow-glow"
+            className="h-[46px] w-[46px] rounded-xl border border-accent/40 object-cover shadow-glow transition group-hover:border-accent group-hover:shadow-[0_0_26px_-4px_rgb(var(--accent-rgb)/0.7)]"
             draggable={false}
           />
           <div className="leading-none">
-            <div className="text-[26px] font-bold tracking-[0.2em] text-white">A.I.D.A</div>
+            <div className="text-[26px] font-bold tracking-[0.2em] text-frost"><Aida /></div>
             <div className="mt-1.5 hidden text-[10px] font-medium uppercase tracking-[0.22em] text-steel sm:block">
               Artificial Intelligence · Desktop Assistant
             </div>
           </div>
-        </div>
+        </BrandLink>
         <div className="app-no-drag flex items-center gap-4">
           <span className="hidden text-[12px] text-steel md:inline">
-            Avatar &amp; Knowledge base :<span className="ml-2 font-semibold text-violet-soft">{avatar.label}</span>
+            Avatar &amp; Knowledge base :<span className="ml-2 font-semibold text-accent-soft">{avatar.label}</span>
           </span>
           {!status.online && (
             <span className="flex items-center gap-1.5 rounded-full border border-crimson/40 bg-crimson/10 px-2.5 py-1 text-[11px] text-crimson" role="status">
               <span className="h-1.5 w-1.5 rounded-full bg-crimson" /> Offline
             </span>
           )}
+          <ThemeToggle />
           <button
             type="button"
             onClick={() => setSettingsOpen(true)}
             title="Settings"
             aria-label="Settings"
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-void-700/50 text-frost/90 transition hover:border-violet/60 hover:text-white hover:shadow-glow"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-void-700/50 text-frost/90 transition hover:border-accent/60 hover:text-frost hover:shadow-glow"
           >
             <GearIcon size={20} />
           </button>
@@ -369,17 +373,17 @@ export default function App() {
         }
         aria-hidden={historyOpen}
       >
-        <span className="pointer-events-auto inline-flex items-center gap-2 rounded-full [@media(max-height:760px)]:hidden border border-violet/50 bg-violet/15 px-4 py-1.5 text-[11.5px] font-semibold uppercase tracking-[0.14em] text-white">
-          <SparkleIcon size={15} className="text-violet-soft" /> Welcome to A.I.D.A
+        <span className="pointer-events-auto inline-flex items-center gap-2 rounded-full [@media(max-height:760px)]:hidden border border-accent/50 bg-accent/15 px-4 py-1.5 text-[11.5px] font-semibold uppercase tracking-[0.14em] text-frost">
+          <SparkleIcon size={15} className="text-accent-soft" /> Welcome to <Aida />
         </span>
-        <h1 className="mt-5 text-[clamp(40px,5vw,66px)] [@media(max-height:760px)]:mt-0 font-bold leading-[1.02] tracking-tight text-white">
-          I’m A.<span className="bg-gradient-to-r from-violet-soft to-violet bg-clip-text text-transparent">I.D.A</span>
+        <h1 className="mt-5 text-[clamp(40px,5vw,66px)] [@media(max-height:760px)]:mt-0 font-bold leading-[1.02] tracking-tight text-frost">
+          I’m <Aida>A.<span className="bg-gradient-to-r from-accent-soft to-accent bg-clip-text text-transparent">I.D.A</span></Aida>
         </h1>
         <p className="mt-1 text-[clamp(22px,2.6vw,36px)] font-light leading-tight text-frost">Your Virtual AI Team.</p>
         <p className="mt-4 max-w-[400px] text-[14.5px] leading-relaxed text-frost/75 [@media(max-height:820px)]:hidden">
           A unified AI platform with specialized experts to help you plan, build, analyze, create and protect — all in one place.
         </p>
-        <div className="mt-5 h-[3px] w-14 rounded-full bg-gradient-to-r from-violet to-violet/0 [@media(max-height:820px)]:hidden" />
+        <div className="mt-5 h-[3px] w-14 rounded-full bg-gradient-to-r from-accent to-accent/0 [@media(max-height:820px)]:hidden" />
       </div>
 
       {/* ── Notices (mic denied, voice quota…) — also visible while the chat rail is collapsed ── */}
@@ -456,7 +460,7 @@ export default function App() {
               onClick={openChat}
               title="Chat (C)"
               aria-label="Open chat"
-              className="flex w-12 flex-col items-center gap-1 rounded-xl py-2 text-frost/90 transition hover:bg-white/10 hover:text-white"
+              className="flex w-12 flex-col items-center gap-1 rounded-xl py-2 text-frost/90 transition hover:bg-frost/10 hover:text-frost"
             >
               <ChatIcon size={22} />
               <span className="text-[10px] font-medium text-steel">Chat</span>
@@ -466,7 +470,7 @@ export default function App() {
               type="button"
               onClick={openChat}
               aria-label="Expand chat"
-              className="mt-auto flex h-9 w-9 items-center justify-center rounded-lg text-steel transition hover:bg-white/10 hover:text-white"
+              className="mt-auto flex h-9 w-9 items-center justify-center rounded-lg text-steel transition hover:bg-frost/10 hover:text-frost"
             >
               <ChevronRightIcon size={18} className="rotate-180" />
             </button>
@@ -478,7 +482,7 @@ export default function App() {
         >
           <div className="flex items-center justify-between border-b border-line px-5 py-3">
             <div className="min-w-0">
-              <h2 className="truncate text-[14px] font-semibold text-white">{conversation?.title ?? "Chat"}</h2>
+              <h2 className="truncate text-[14px] font-semibold text-frost">{conversation?.title ?? "Chat"}</h2>
               <span className="label !text-[9.5px]">
                 {project ? project.name : "no project"} · {MODE_LABEL[activePersona] ?? activePersona}
               </span>
@@ -488,7 +492,7 @@ export default function App() {
               onClick={() => setChatOpen(false)}
               aria-label="Collapse chat"
               title="Collapse (C)"
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-steel transition hover:bg-white/10 hover:text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-steel transition hover:bg-frost/10 hover:text-frost"
             >
               <CloseIcon size={18} />
             </button>

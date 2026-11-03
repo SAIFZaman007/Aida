@@ -1,3 +1,4 @@
+import { brandify } from '../theme/brandText.js';
 import { frameAll } from './lib/avatar.js';
 import { paintBars } from './lib/dom.js';
 import { paintIcons } from './lib/icons.js';
@@ -38,6 +39,7 @@ export function boot() {
   paintIcons();
   paintBars();
   brand(); // logos injected by the sections above
+  brandify(document.getElementById('landing')); // every "A.I.D.A" in the brand typeface
   // Re-frame faces once images/fonts settle and on resize.
   setTimeout(frameAll, 300);
   setTimeout(frameAll, 1500);

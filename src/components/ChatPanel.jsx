@@ -449,15 +449,15 @@ export default function ChatPanel({ conversation, avatar, onActivity, onNotice, 
         {(listening || voiceNote.text) && (
           <div className="mb-2 space-y-1 font-sans text-[10px] uppercase tracking-widest">
             {listening && (
-              <div className="flex items-center gap-2 text-violet">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-violet" />
+              <div className="flex items-center gap-2 text-accent">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
                 <span>{phase}</span>
                 <span
-                  className="h-1.5 w-28 overflow-hidden rounded-full bg-violet/15"
+                  className="h-1.5 w-28 overflow-hidden rounded-full bg-accent/15"
                   title="Live microphone level"
                   aria-hidden="true"
                 >
-                  <span ref={meterRef} className="block h-full w-0 rounded-full bg-violet" />
+                  <span ref={meterRef} className="block h-full w-0 rounded-full bg-accent" />
                 </span>
               </div>
             )}
@@ -478,8 +478,8 @@ export default function ChatPanel({ conversation, avatar, onActivity, onNotice, 
             className={
               "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border text-base transition " +
               (settings.voiceMode
-                ? "border-violet bg-violet/20 text-violet"
-                : "border-line text-steel hover:border-violet/50 hover:text-violet")
+                ? "border-accent bg-accent/20 text-accent"
+                : "border-line text-steel hover:border-accent/50 hover:text-accent")
             }
           >
             {settings.voiceMode ? <StopIcon size={18} /> : <MicIcon size={18} />}
@@ -498,7 +498,7 @@ export default function ChatPanel({ conversation, avatar, onActivity, onNotice, 
             rows={1}
             placeholder="Type a message…"
             title="Enter to send · Shift+Enter for a new line"
-            className="max-h-40 flex-1 resize-none rounded-lg border border-line bg-void-700 px-4 py-3 font-sans text-[13px] text-frost placeholder:text-steel/50 focus:border-violet/50 focus:outline-hidden"
+            className="max-h-40 flex-1 resize-none rounded-lg border border-line bg-void-700 px-4 py-3 font-sans text-[13px] text-frost placeholder:text-steel/50 focus:border-accent/50 focus:outline-hidden"
           />
           {canStop ? (
             <button
@@ -512,7 +512,7 @@ export default function ChatPanel({ conversation, avatar, onActivity, onNotice, 
             <button
               onClick={() => send(draft)}
               disabled={!draft.trim()}
-              className="h-11 shrink-0 rounded-lg border border-violet/40 bg-violet/15 px-5 font-hud text-sm font-semibold uppercase tracking-wider text-violet transition hover:bg-violet/25 disabled:opacity-25"
+              className="h-11 shrink-0 rounded-lg border border-accent/40 bg-accent/15 px-5 font-hud text-sm font-semibold uppercase tracking-wider text-accent transition hover:bg-accent/25 disabled:opacity-25"
             >
               Send
             </button>
@@ -557,9 +557,9 @@ function Bubble({ role, text, error, streaming, ghost, highlightRange, markRef }
         className={
           "max-w-[80%] whitespace-pre-wrap rounded-lg px-4 py-2.5 text-[13px] leading-relaxed " +
           (ghost
-            ? "border border-dashed border-violet/40 bg-violet/5 italic text-frost/80"
+            ? "border border-dashed border-accent/40 bg-accent/5 italic text-frost/80"
             : isUser
-              ? "border border-violet/25 bg-violet/5 text-frost"
+              ? "border border-accent/25 bg-accent/5 text-frost"
               : error
                 ? "border border-crimson/40 bg-crimson/5 text-crimson"
                 : "border border-line bg-void-700/70 text-frost")

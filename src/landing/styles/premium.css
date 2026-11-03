@@ -26,11 +26,11 @@
 /* Nothing may show in the strip between the browser's top edge and the floating bar:
    a solid strip (same colour as the page) sits behind the glass once the page has scrolled. */
 .topnav::before{content:"";position:absolute;left:0;right:0;top:0;height:30px;pointer-events:none;opacity:0;transition:opacity .25s;
-  background:linear-gradient(180deg,var(--ink) 0,var(--ink) 17px,rgba(5,6,14,0) 100%)}
+  background:linear-gradient(180deg,var(--ink) 0,var(--ink) 17px,rgb(var(--s0-rgb) / 0) 100%)}
 .topnav.scrolled::before{opacity:1}
 /* floating glass: its shadow may leave the bar, so the bar no longer clips (the shine clips itself) */
-.topnav .bar{overflow:visible;box-shadow:0 0 0 1px rgba(230,192,106,.20),0 18px 44px -18px rgba(0,0,0,.85),0 1px 0 rgba(255,255,255,.07) inset}
-.topnav.scrolled .bar{box-shadow:0 0 0 1px rgba(230,192,106,.30),0 22px 50px -18px rgba(0,0,0,.9),0 1px 0 rgba(255,255,255,.06) inset}
+.topnav .bar{overflow:visible;box-shadow:0 0 0 1px rgba(230,192,106,.20),0 18px 44px -18px rgba(0,0,0,.85),0 1px 0 rgb(var(--w-rgb) / .07) inset}
+.topnav.scrolled .bar{box-shadow:0 0 0 1px rgba(230,192,106,.30),0 22px 50px -18px rgba(0,0,0,.9),0 1px 0 rgb(var(--w-rgb) / .06) inset}
 .topnav .bar::before{border-radius:inherit}
 .topnav .bar::after{left:0;width:100%;border-radius:inherit;
   background:linear-gradient(100deg,transparent 38%,rgba(247,227,166,.10) 50%,transparent 62%) 130% 0/300% 100% no-repeat;
@@ -52,30 +52,51 @@
 .topnav .tl a:hover::after,.topnav .tl a.on::after{transform:scaleX(1)}
 .topnav .tl a.on{box-shadow:0 0 0 1px rgba(230,192,106,.22) inset}
 
-/* the Launch button floats above the bar */
-.topnav .tc{position:relative;border-radius:13px;
-  box-shadow:inset 0 1px 0 #fff,0 0 0 1px rgba(230,192,106,.35),0 2px 4px rgba(0,0,0,.45),0 12px 26px -8px rgba(179,168,255,.7),0 22px 36px -16px rgba(0,0,0,.8);
-  transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s,background .35s;animation:btnFloat 5.5s ease-in-out infinite}
-.topnav .tc:hover{transform:translateY(-3px);background:#fff;
-  box-shadow:inset 0 1px 0 #fff,0 0 0 1px rgba(247,227,166,.9),0 0 0 4px rgba(230,192,106,.16),0 18px 34px -8px var(--gold-glow),0 28px 40px -16px rgba(0,0,0,.8)}
-@media (max-width:420px){.topnav .tb b{font-size:16px}}
+/* The Launch button: cream (dark mode) / charcoal (light mode) at rest; on hover a matte premium orange with a
+   golden lining fades in. It is built from two layers that cross-fade (a gradient cannot transition into a
+   colour, which is what made the old button blink), and the button itself never moves: only the label is
+   pulled magnetically toward the cursor (nav.js), and an invisible 14px halo keeps the hover area steady. */
+.topnav .tr{justify-self:end;display:flex;align-items:center;gap:16px}
+.topnav .tc{--mx:0px;--my:0px;position:relative;isolation:isolate;display:inline-flex;align-items:center;justify-content:center;height:42px;padding:0 22px;border-radius:13px;
+  font-size:14px;font-weight:600;letter-spacing:.01em;color:rgb(var(--s0-rgb));white-space:nowrap;
+  background:linear-gradient(180deg,rgb(var(--fg-rgb)),rgb(var(--fg2-rgb)));
+  box-shadow:0 0 0 1px rgb(230 192 106 / .4),0 2px 4px rgb(0 0 0 / .3),0 14px 28px -12px rgb(255 127 36 / .5);
+  transition:color .35s ease,box-shadow .4s ease}
+.topnav .tc::before{content:"";position:absolute;inset:-14px;border-radius:26px}
+.topnav .tc::after{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;border:1.5px solid transparent;opacity:0;transition:opacity .4s ease;
+  background:linear-gradient(180deg,#EC6F14 0%,#CC5500 100%) padding-box,var(--gold-line) border-box}
+.topnav .tc-in{position:relative;display:block;transform:translate3d(var(--mx),var(--my),0);transition:transform .45s cubic-bezier(.2,.9,.25,1.2);will-change:transform}
+.topnav .tc.mag .tc-in{transition:transform .14s ease-out}
+.topnav .tc:hover,.topnav .tc:focus-visible{color:#fff;box-shadow:0 0 0 1px rgb(247 227 166 / .55),0 0 0 4px rgb(230 192 106 / .14),0 18px 34px -10px rgb(255 127 36 / .6),0 4px 8px rgb(0 0 0 / .25)}
+.topnav .tc:hover::after,.topnav .tc:focus-visible::after{opacity:1}
+.topnav .tc:hover .tc-in,.topnav .tc:focus-visible .tc-in{text-shadow:0 1px 1px rgb(120 40 0 / .5)}
+.topnav .tc:focus-visible{outline:2px solid var(--gold);outline-offset:4px}
+.topnav .tc:active{box-shadow:0 0 0 1px rgb(247 227 166 / .55),0 8px 18px -8px rgb(255 127 36 / .6)}
+@media (max-width:480px){
+  .topnav .tb{gap:10px}
+  .topnav .tb b{font-size:15px;letter-spacing:.14em}
+  .topnav .tc{height:38px;padding:0 13px;font-size:13px;border-radius:12px}
+  .topnav .tr{gap:8px}
+}
+@media (max-width:360px){.topnav .tb b{font-size:14px;letter-spacing:.08em}.topnav .tc{padding:0 10px;font-size:12.5px}}
 
 /* ───────────────────────── 3 · floating buttons ───────────────────────── */
 @keyframes btnFloat{0%,100%{translate:0 0}50%{translate:0 -3px}}
 .btn{position:relative;isolation:isolate;transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s,background .35s,color .35s}
 .btn-primary{
-  box-shadow:0 0 0 1px rgba(255,255,255,.16) inset,0 2px 4px rgba(0,0,0,.4),0 14px 30px -10px rgba(124,108,255,.75),0 26px 44px -22px rgba(0,0,0,.85)}
-.btn-ghost{background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.02));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  box-shadow:0 0 0 1px rgb(var(--w-rgb) / .16) inset,0 2px 4px rgba(0,0,0,.4),0 14px 30px -10px rgb(240 112 24 / .75),0 26px 44px -22px rgba(0,0,0,.85)}
+.btn-ghost{background:linear-gradient(180deg,rgb(var(--w-rgb) / .075),rgb(var(--w-rgb) / .02));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
   box-shadow:0 0 0 1px var(--line-2) inset,0 2px 4px rgba(0,0,0,.35),0 16px 30px -14px rgba(0,0,0,.9)}
 .hero-cta .btn-primary,.fcta{animation:btnFloat 5.5s ease-in-out infinite}
 /* the golden lining: a gold ring that draws itself around the button on hover / focus */
 .btn::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;z-index:2;pointer-events:none;opacity:0;transition:opacity .35s;
   background:conic-gradient(from var(--ang),#8A6119,#FFF1C4,#E2B25A,#8A6119,#FFF1C4,#E2B25A,#8A6119);
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.btn::after{content:"";position:absolute;inset:-6px;border-radius:inherit}
 .btn:hover,.btn:focus-visible{transform:translateY(-3px)}
 .btn:hover::before,.btn:focus-visible::before{opacity:1;animation:angSpin 3.4s linear infinite}
-.btn-primary:hover{box-shadow:0 0 0 1px rgba(255,255,255,.2) inset,0 2px 4px rgba(0,0,0,.4),0 20px 40px -10px var(--gold-glow),0 30px 50px -22px rgba(0,0,0,.85)}
-.btn-ghost:hover{background:linear-gradient(180deg,rgba(247,227,166,.12),rgba(255,255,255,.03));
+.btn-primary:hover{box-shadow:0 0 0 1px rgb(var(--w-rgb) / .2) inset,0 2px 4px rgba(0,0,0,.4),0 20px 40px -10px var(--gold-glow),0 30px 50px -22px rgba(0,0,0,.85)}
+.btn-ghost:hover{background:linear-gradient(180deg,rgba(247,227,166,.12),rgb(var(--w-rgb) / .03));
   box-shadow:0 0 0 1px rgba(230,192,106,.5) inset,0 2px 4px rgba(0,0,0,.35),0 20px 36px -12px var(--gold-glow)}
 .btn:focus-visible{outline:2px solid var(--gold);outline-offset:4px}
 /* "coming soon" is not a button: no lift, no ring */
@@ -93,11 +114,11 @@ svg.i .l{fill:none;stroke:url(#aida-gold)}
 .marq-row .spark{color:var(--gold)}
 /* icon chips: dark glass, gold lining */
 .hcard .meta .ic,.sp-tab .tm .ic,.tile .tic,.checks .ck,.qa .pm,.fl-box,.sp-label .ic,.pz-micbtn{
-  background:linear-gradient(180deg,rgba(230,192,106,.16),rgba(230,192,106,.03)),#0C0D20;
+  background:linear-gradient(180deg,rgba(230,192,106,.16),rgba(230,192,106,.03)),rgb(var(--s2-rgb));
   box-shadow:0 0 0 1px rgba(230,192,106,.5) inset}
 .hcard .meta .ic{backdrop-filter:blur(8px)}
-.hcard.on .meta .ic,.sp-tab.on .tm .ic{background:linear-gradient(180deg,rgba(247,227,166,.32),rgba(230,192,106,.08)),#0C0D20;box-shadow:0 0 0 1px rgba(247,227,166,.85) inset,0 0 16px -2px var(--gold-glow);color:inherit}
-.sp-label .ic{background:#0B0C1B;color:inherit}
+.hcard.on .meta .ic,.sp-tab.on .tm .ic{background:linear-gradient(180deg,rgba(247,227,166,.32),rgba(230,192,106,.08)),rgb(var(--s2-rgb));box-shadow:0 0 0 1px rgba(247,227,166,.85) inset,0 0 16px -2px var(--gold-glow);color:inherit}
+.sp-label .ic{background:rgb(var(--s1-rgb));color:inherit}
 .tile .tic svg{stroke-width:1.4}
 .step .sic svg{stroke-width:1.3}
 .cross .step.on .sic{filter:drop-shadow(0 0 10px rgba(230,192,106,.8))}
@@ -110,7 +131,7 @@ svg.i .l{fill:none;stroke:url(#aida-gold)}
 .fl-box svg{stroke:#1a1203}
 .fl-box{background:transparent;box-shadow:inset 0 0 0 1.5px rgba(230,192,106,.55)}
 .fl-item.done .fl-box{background:linear-gradient(180deg,#F7E3A6,#D9A94B);box-shadow:0 0 14px rgba(230,192,106,.6)}
-.fl-x svg{stroke:#6E7193}.fl-x svg .f{fill:rgba(110,113,147,.15);stroke:#6E7193}.fl-x svg .l{stroke:#6E7193}
+.fl-x svg{stroke:rgb(var(--t4-rgb))}.fl-x svg .f{fill:rgb(var(--t4-rgb) / .15);stroke:rgb(var(--t4-rgb))}.fl-x svg .l{stroke:rgb(var(--t4-rgb))}
 
 /* ───────────────────────── 5 · golden linings on cards ───────────────────────── */
 /* a metallic gold hairline (gradient border) on the main surfaces; it brightens on hover / when active */
@@ -124,12 +145,12 @@ svg.i .l{fill:none;stroke:url(#aida-gold)}
 .detail:hover,.sp-stage:hover,.chat:hover,.fl-panel:hover,.fl-team:hover,.qa:hover,.hcard:hover,.sp-tab:hover,.saybox:hover,.cross .panel.on{--gl:1}
 .qa.open,.hcard.on,.sp-tab.on{--gl:1}
 /* states that were violet */
-.hcard.on{box-shadow:0 0 0 1.5px rgba(247,227,166,.75) inset,0 0 0 6px rgba(230,192,106,.09),0 40px 90px -20px rgba(124,108,255,.75)}
+.hcard.on{box-shadow:0 0 0 1.5px rgba(247,227,166,.75) inset,0 0 0 6px rgba(230,192,106,.09),0 40px 90px -20px rgb(240 112 24 / .75)}
 .sp-tab.on{box-shadow:0 0 0 1.5px rgba(247,227,166,.75) inset,0 20px 50px -18px var(--gold-glow)}
 .sp-tab .prog{background:var(--gold-line)}
-.qa.open{box-shadow:0 0 0 1px rgba(230,192,106,.5) inset;background:radial-gradient(60% 80% at 0% 0%,rgba(230,192,106,.08),transparent 70%),#0B0C1B}
+.qa.open{box-shadow:0 0 0 1px rgba(230,192,106,.5) inset;background:radial-gradient(60% 80% at 0% 0%,rgba(230,192,106,.08),transparent 70%),rgb(var(--s1-rgb))}
 .cross .panel.on{box-shadow:0 0 0 1px rgba(230,192,106,.55) inset,0 0 40px -10px rgba(230,192,106,.35)}
-.lang-toggle button.on{background:rgba(230,192,106,.14);box-shadow:0 0 0 1px rgba(230,192,106,.5) inset;color:#fff}
+.lang-toggle button.on{background:rgba(230,192,106,.14);box-shadow:0 0 0 1px rgba(230,192,106,.5) inset;color:rgb(var(--fg-rgb))}
 .lang-toggle button:focus-visible,.hcard:focus-visible,.sp-tab:focus-visible,.qa button:focus-visible{outline:2px solid var(--gold)}
 .sp-live,.sp-state{box-shadow:0 0 0 1px rgba(230,192,106,.4) inset}
 .sp-state.talk{background:linear-gradient(180deg,rgba(230,192,106,.9),rgba(185,138,52,.9));color:#1a1203}
@@ -149,10 +170,10 @@ svg.i .l{fill:none;stroke:url(#aida-gold)}
 .plat span.soon b{background:rgba(230,192,106,.16);color:var(--gold-2)}
 .chat.talking .top .who{box-shadow:0 0 0 1.5px var(--gold),0 0 0 5px rgba(230,192,106,.22)}
 .chat .top .who{box-shadow:0 0 0 1.5px rgba(230,192,106,.7)}
-.core{box-shadow:0 0 0 1px rgba(230,192,106,.45) inset,0 30px 80px -10px rgba(124,108,255,.6)}
+.core{box-shadow:0 0 0 1px rgba(230,192,106,.45) inset,0 30px 80px -10px rgb(240 112 24 / .6)}
 @keyframes coreGlow{
-  0%,100%{box-shadow:0 0 0 1px rgba(230,192,106,.4) inset,0 30px 80px -10px rgba(124,108,255,.5)}
-  50%{box-shadow:0 0 0 1px rgba(247,227,166,.7) inset,0 30px 110px -6px rgba(124,108,255,.8),0 0 40px -6px rgba(230,192,106,.35)}}
+  0%,100%{box-shadow:0 0 0 1px rgba(230,192,106,.4) inset,0 30px 80px -10px rgb(240 112 24 / .5)}
+  50%{box-shadow:0 0 0 1px rgba(247,227,166,.7) inset,0 30px 110px -6px rgb(240 112 24 / .8),0 0 40px -6px rgba(230,192,106,.35)}}
 .core .in{box-shadow:0 0 0 1px rgba(230,192,106,.3) inset}
 
 /* ───────────────────────── 6 · details ───────────────────────── */
@@ -175,35 +196,35 @@ svg.i .l{fill:none;stroke:url(#aida-gold)}
 
 /* the orb of the problem section: the emblem, as a floating bubble */
 .orb-bubble{position:relative;z-index:3;width:150px;height:150px;border-radius:50%;animation:bubbleFloat 6s ease-in-out infinite;
-  background:radial-gradient(circle at 50% 40%,#161833,#070816 75%);
-  box-shadow:0 0 0 1.5px rgba(247,227,166,.85),0 0 0 8px rgba(230,192,106,.10),0 0 64px rgba(139,124,255,.65),0 26px 50px -12px rgba(0,0,0,.85),inset 0 0 30px rgba(139,124,255,.35)}
+  background:radial-gradient(circle at 50% 40%,rgb(var(--s4-rgb)),rgb(var(--s1-rgb)) 75%);
+  box-shadow:0 0 0 1.5px rgba(247,227,166,.85),0 0 0 8px rgba(230,192,106,.10),0 0 64px rgb(255 127 36 / .65),0 26px 50px -12px rgba(0,0,0,.85),inset 0 0 30px rgb(255 127 36 / .35)}
 .orb-bubble img{position:absolute;inset:7px;width:calc(100% - 14px);height:calc(100% - 14px);border-radius:50%;object-fit:cover;object-position:50% 42%;display:block}
 .ob-shine{position:absolute;inset:0;border-radius:50%;pointer-events:none;mix-blend-mode:screen;
-  background:radial-gradient(58% 38% at 33% 17%,rgba(255,255,255,.5),rgba(255,255,255,0) 72%),radial-gradient(50% 30% at 70% 92%,rgba(247,227,166,.22),transparent 70%)}
+  background:radial-gradient(58% 38% at 33% 17%,rgb(var(--w-rgb) / .5),rgb(var(--w-rgb) / 0) 72%),radial-gradient(50% 30% at 70% 92%,rgba(247,227,166,.22),transparent 70%)}
 @keyframes bubbleFloat{0%,100%{transform:translateY(-7px)}50%{transform:translateY(8px)}}
 .orb-cap{position:absolute;left:50%;bottom:2px;transform:translateX(-50%);z-index:5;white-space:nowrap;padding:5px 12px;border-radius:999px;
   font-family:var(--f-mono);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-2);
-  background:rgba(8,9,22,.82);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 0 0 1px rgba(230,192,106,.4) inset}
+  background:rgb(var(--s1-rgb) / .82);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 0 0 1px rgba(230,192,106,.4) inset}
 .orb-ring{background:conic-gradient(from 0deg,transparent 0 55%,rgba(247,227,166,.9) 75%,transparent 80%)}
 .orb-pulse{box-shadow:0 0 0 1px rgba(230,192,106,.45)}
-.orb-face{box-shadow:0 0 0 2px #0B0C1B,0 0 0 3px rgba(230,192,106,.7),0 8px 20px -6px rgba(0,0,0,.8)}
-.fl-faces span,.pz-faces span{box-shadow:0 0 0 2px #0E0F22,0 0 0 3px rgba(230,192,106,.4)}
-.pz-faces span.on{box-shadow:0 0 0 2px #0B0C1B,0 0 0 3.5px var(--gold),0 0 18px rgba(230,192,106,.7)}
+.orb-face{box-shadow:0 0 0 2px rgb(var(--s1-rgb)),0 0 0 3px rgba(230,192,106,.7),0 8px 20px -6px rgba(0,0,0,.8)}
+.fl-faces span,.pz-faces span{box-shadow:0 0 0 2px rgb(var(--s2-rgb)),0 0 0 3px rgba(230,192,106,.4)}
+.pz-faces span.on{box-shadow:0 0 0 2px rgb(var(--s1-rgb)),0 0 0 3.5px var(--gold),0 0 18px rgba(230,192,106,.7)}
 /* closing orb */
-.cta-orb{box-shadow:0 0 0 1px rgba(247,227,166,.6) inset,0 0 0 7px rgba(230,192,106,.08),0 0 80px rgba(139,124,255,.55)}
+.cta-orb{box-shadow:0 0 0 1px rgba(247,227,166,.6) inset,0 0 0 7px rgba(230,192,106,.08),0 0 80px rgb(255 127 36 / .55)}
 .co-ring{box-shadow:0 0 0 1px rgba(230,192,106,.5)}
 .cta-orb::after{background:conic-gradient(from 0deg,transparent 0 65%,rgba(247,227,166,.95) 85%,transparent 95%)}
 
 /* Maktech: the word itself is the link */
 .mak h2 .mak-link{color:var(--gold-2);text-decoration:underline;text-decoration-color:rgba(230,192,106,.55);text-decoration-thickness:2px;text-underline-offset:.13em;
   transition:color .3s,text-decoration-color .3s,text-shadow .3s}
-.mak h2 .mak-link:hover,.mak h2 .mak-link:focus-visible{color:#fff;text-decoration-color:var(--gold);text-shadow:0 0 28px rgba(230,192,106,.6)}
+.mak h2 .mak-link:hover,.mak h2 .mak-link:focus-visible{color:rgb(var(--fg-rgb));text-decoration-color:var(--gold);text-shadow:0 0 28px rgba(230,192,106,.6)}
 .mak h2 .mak-link:focus-visible{outline:2px solid var(--gold);outline-offset:6px;border-radius:6px}
 .mak .split>div:first-child{align-items:flex-start}
 
 /* ───────────────────────── 7 · premium footer ───────────────────────── */
 footer.pf{border-top:0;padding-top:92px;
-  background:radial-gradient(46% 26% at 50% 0%,rgba(230,192,106,.09),transparent 72%),radial-gradient(60% 50% at 50% 100%,rgba(124,108,255,.24),transparent 70%)}
+  background:radial-gradient(46% 26% at 50% 0%,rgba(230,192,106,.09),transparent 72%),radial-gradient(60% 50% at 50% 100%,rgb(240 112 24 / .24),transparent 70%)}
 .pf-rule{position:absolute;left:0;right:0;top:0;height:1px;overflow:hidden;background:linear-gradient(90deg,transparent,rgba(230,192,106,.7) 50%,transparent)}
 .pf-rule::after{content:"";position:absolute;top:0;bottom:0;left:-30%;width:30%;background:linear-gradient(90deg,transparent,#fff7d6,transparent);animation:pfShine 7s ease-in-out infinite}
 @keyframes pfShine{0%,55%{left:-30%}100%{left:130%}}
@@ -227,15 +248,15 @@ footer.pf{border-top:0;padding-top:92px;
 .fgrid li a:hover::before,.fgrid li a:focus-visible::before,.fgrid li span:hover::before{width:16px;margin-right:9px}
 .fgrid li a:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:4px}
 .fgrid li span{cursor:default}
-footer a:hover{color:#fff}
+footer a:hover{color:rgb(var(--fg-rgb))}
 footer .ghost{background:linear-gradient(180deg,rgba(247,227,166,.42),rgba(201,154,63,.12) 55%,rgba(201,154,63,0) 92%);-webkit-background-clip:text;background-clip:text;color:transparent;
   -webkit-text-stroke:1px rgba(230,192,106,.32)}
 .legal{position:relative;align-items:center;border-top:0;padding-block:26px}
 .legal::before{content:"";position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(230,192,106,.45),transparent)}
-.legal .fl-mak{color:#C9CADC;transition:color .3s,text-shadow .3s}
+.legal .fl-mak{color:rgb(var(--fg2-rgb));transition:color .3s,text-shadow .3s}
 .legal .fl-mak:hover,.legal .fl-mak:focus-visible{color:var(--gold-2);text-shadow:0 0 16px rgba(230,192,106,.5)}
 .totop{position:relative;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;flex:none;
-  background:linear-gradient(180deg,rgba(230,192,106,.16),rgba(230,192,106,.04)),#0C0D20;box-shadow:0 0 0 1px rgba(230,192,106,.55) inset,0 2px 4px rgba(0,0,0,.4),0 12px 22px -10px rgba(0,0,0,.9);
+  background:linear-gradient(180deg,rgba(230,192,106,.16),rgba(230,192,106,.04)),rgb(var(--s2-rgb));box-shadow:0 0 0 1px rgba(230,192,106,.55) inset,0 2px 4px rgba(0,0,0,.4),0 12px 22px -10px rgba(0,0,0,.9);
   transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s}
 .totop svg{transform:rotate(-90deg)}
 .totop:hover,.totop:focus-visible{transform:translateY(-4px);box-shadow:0 0 0 1px rgba(247,227,166,.95) inset,0 0 0 4px rgba(230,192,106,.14),0 16px 28px -8px var(--gold-glow)}
@@ -255,7 +276,7 @@ footer .ghost{background:linear-gradient(180deg,rgba(247,227,166,.42),rgba(201,1
 footer .legal.rv{translate:none;filter:none}
 /* Icons on a violet button: pale-gold lining so they stay legible */
 .btn-primary svg.i,.btn-primary svg.i .f,.btn-primary svg.i .l{stroke:#FFF1C4}
-.btn-primary svg.i .f{fill:rgba(255,255,255,.22)}
+.btn-primary svg.i .f{fill:rgb(var(--w-rgb) / .22)}
 /* the check mark of a ticked benefit is dark on gold (the generic icon rule above would paint it gold) */
 .fl-box svg.i .l{stroke:#1a1203}
 .legal-r{display:flex;align-items:center;gap:18px}

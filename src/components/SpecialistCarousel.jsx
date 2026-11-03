@@ -56,11 +56,11 @@ export default function SpecialistCarousel({ active, onSelect, note }) {
     <section aria-labelledby="specialists-title" className="relative w-full">
       <div className="mb-3 flex items-end justify-between gap-4 px-1">
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-void-700/60 text-violet-soft">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-line bg-void-700/60 text-accent-soft">
             <UsersIcon size={22} />
           </span>
           <div>
-            <h2 id="specialists-title" className="text-[17px] font-semibold leading-tight text-white">
+            <h2 id="specialists-title" className="text-[17px] font-semibold leading-tight text-frost">
               Meet Your AI Specialists
             </h2>
             <p role="status" className={"text-[12.5px] " + (note ? "text-crimson" : "text-steel")}>
@@ -77,7 +77,7 @@ export default function SpecialistCarousel({ active, onSelect, note }) {
                 onClick={() => go(d)}
                 disabled={d < 0 ? edge.start : edge.end}
                 aria-label={d < 0 ? "Previous specialists" : "Next specialists"}
-                className="glass flex h-9 w-9 items-center justify-center rounded-full text-frost transition hover:border-violet/60 hover:text-white disabled:opacity-35 disabled:hover:border-line"
+                className="glass flex h-9 w-9 items-center justify-center rounded-full text-frost transition hover:border-accent/60 hover:text-frost disabled:opacity-35 disabled:hover:border-line"
               >
                 {d < 0 ? <ChevronLeftIcon size={18} /> : <ChevronRightIcon size={18} />}
               </button>
@@ -105,8 +105,8 @@ export default function SpecialistCarousel({ active, onSelect, note }) {
               className={
                 "group relative h-[188px] min-w-[150px] flex-1 basis-0 snap-start overflow-hidden rounded-2xl border text-left transition duration-300 " +
                 (selected
-                  ? "border-violet bg-void-700/80 shadow-glow"
-                  : "border-line bg-void-800/70 hover:-translate-y-0.5 hover:border-violet/50")
+                  ? "border-accent bg-void-700/80 shadow-glow"
+                  : "border-line bg-void-800/70 hover:-translate-y-0.5 hover:border-accent/50")
               }
             >
               <img
@@ -121,7 +121,7 @@ export default function SpecialistCarousel({ active, onSelect, note }) {
               />
               <span className="absolute inset-0 bg-gradient-to-t from-void-900 via-void-900/70 to-void-900/0" />
               {selected && (
-                <span className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full bg-violet text-void-900 shadow-glow">
+                <span className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-void-900 shadow-glow">
                   <CheckIcon size={14} />
                 </span>
               )}
@@ -129,13 +129,13 @@ export default function SpecialistCarousel({ active, onSelect, note }) {
                 <span
                   className={
                     "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border backdrop-blur-sm " +
-                    (selected ? "border-violet/70 bg-violet/25 text-white" : "border-line bg-void-900/60 text-violet-soft")
+                    (selected ? "border-accent/70 bg-accent/25 text-frost" : "border-line bg-void-900/60 text-accent-soft")
                   }
                 >
                   <Icon size={17} />
                 </span>
                 <span className="min-w-0">
-                  <span className="block truncate text-[14px] font-semibold leading-tight text-white">{label}</span>
+                  <span className="block truncate text-[14px] font-semibold leading-tight text-frost">{label}</span>
                   <span className="block text-[11px] leading-snug text-frost/70">{MODE_TAGLINE[id]}</span>
                 </span>
               </span>
@@ -154,7 +154,7 @@ export default function SpecialistCarousel({ active, onSelect, note }) {
               aria-selected={i === page}
               aria-label={`Page ${i + 1}`}
               onClick={() => toPage(i)}
-              className={"h-1.5 rounded-full transition-all " + (i === page ? "w-7 bg-violet" : "w-1.5 bg-steel/40 hover:bg-steel/70")}
+              className={"h-1.5 rounded-full transition-all " + (i === page ? "w-7 bg-accent" : "w-1.5 bg-steel/40 hover:bg-steel/70")}
             />
           ))}
         </div>

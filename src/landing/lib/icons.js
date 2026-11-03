@@ -71,6 +71,6 @@ export function atomSvg() {
     .join('');
   return `<svg viewBox="-50 -50 100 100" class="atom-svg" aria-hidden="true"><defs>` +
     `<radialGradient id="${id}N"><stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="#F7E3A6"/><stop offset="1" stop-color="#B98A34"/></radialGradient>` +
-    `<linearGradient id="${id}L" x1="0" x2="1"><stop offset="0" stop-color="#F7E3A6"/><stop offset="1" stop-color="#B3A8FF"/></linearGradient></defs>` +
+    `<linearGradient id="${id}L" x1="0" x2="1"><stop offset="0" stop-color="#F7E3A6"/><stop offset="1" stop-color="#FFA45C"/></linearGradient></defs>` +
     `<g class="at-spin">${orbits}</g><circle r="9" fill="url(#${id}N)" class="at-n"/></svg>`;
 }

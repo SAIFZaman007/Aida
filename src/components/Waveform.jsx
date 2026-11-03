@@ -52,7 +52,7 @@ export default function Waveform({ mode = "idle", className = "" }) {
       const mid = h / 2;
       const grad = ctx.createLinearGradient(0, 0, w, 0);
       grad.addColorStop(0, "rgba(56,225,255,0.95)");
-      grad.addColorStop(0.5, "rgba(139,123,255,0.98)");
+      grad.addColorStop(0.5, "rgba(255,127,36,0.98)");
       grad.addColorStop(1, "rgba(56,225,255,0.95)");
       ctx.fillStyle = grad;
       for (let i = 0; i < BARS; i++) {

@@ -41,13 +41,13 @@ export default function ControlDock({
           onClick={onChat}
           title="Open text chat (C)"
           aria-label="Open text chat"
-          className="glass flex h-14 w-14 items-center justify-center rounded-full text-frost/90 transition hover:border-violet/60 hover:text-white hover:shadow-glow"
+          className="glass flex h-14 w-14 items-center justify-center rounded-full text-frost/90 transition hover:border-accent/60 hover:text-frost hover:shadow-glow"
         >
           <ChatIcon size={22} />
         </button>
 
         <div className="relative">
-          {voiceOn && <span className="absolute inset-0 animate-pulsering rounded-full border border-violet/70" />}
+          {voiceOn && <span className="absolute inset-0 animate-pulsering rounded-full border border-accent/70" />}
           <button
             type="button"
             onClick={onMic}
@@ -56,10 +56,10 @@ export default function ControlDock({
             title={voiceOn ? "Stop listening" : "Click to talk"}
             aria-label={voiceOn ? "Stop listening" : "Start talking"}
             className={
-              "relative flex h-[88px] w-[88px] items-center justify-center rounded-full border-2 text-white transition duration-300 " +
+              "relative flex h-[88px] w-[88px] items-center justify-center rounded-full border-2 transition duration-300 " +
               (voiceOn
-                ? "border-violet bg-gradient-to-b from-violet-dim to-violet-deep shadow-glow"
-                : "border-violet/70 bg-gradient-to-b from-void-600 to-void-800 shadow-glowsoft hover:border-violet hover:shadow-glow") +
+                ? "border-accent bg-gradient-to-b from-accent-dim to-accent-deep text-white shadow-glow"
+                : "border-accent/70 bg-gradient-to-b from-void-600 to-void-800 text-frost shadow-glowsoft hover:border-accent hover:shadow-glow") +
               (starting ? " opacity-70" : "")
             }
           >
@@ -74,20 +74,20 @@ export default function ControlDock({
           title={speakOn ? "Voice replies on — click to mute" : "Voice replies off — click to turn on"}
           aria-label="Toggle spoken replies"
           className={
-            "glass flex h-14 w-14 items-center justify-center rounded-full transition hover:border-violet/60 hover:shadow-glow " +
-            (speakOn ? "text-frost/90 hover:text-white" : "text-steel/70")
+            "glass flex h-14 w-14 items-center justify-center rounded-full transition hover:border-accent/60 hover:shadow-glow " +
+            (speakOn ? "text-frost/90 hover:text-frost" : "text-steel/70")
           }
         >
           {speakOn ? <WaveIcon size={22} /> : <WaveOffIcon size={22} />}
         </button>
       </div>
 
-      <p role="status" className="mt-3 flex h-6 items-center gap-2 text-[13px] text-frost/90 [text-shadow:0_1px_8px_rgba(6,8,24,0.9)]">
+      <p role="status" className="mt-3 flex h-6 items-center gap-2 text-[13px] text-frost/90 [text-shadow:0_1px_8px_rgb(var(--s0-rgb)/0.9)]">
         {caption ?? (
           <>
             Click the mic to talk with me
             <span className="rounded-full border border-line bg-void-700/70 px-2 py-0.5 text-[11px] text-steel">or</span>
-            <button type="button" onClick={onChat} className="underline-offset-4 hover:text-white hover:underline">
+            <button type="button" onClick={onChat} className="underline-offset-4 hover:text-frost hover:underline">
               open text chat
             </button>
           </>

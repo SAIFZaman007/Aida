@@ -22,7 +22,7 @@ export default function HistoryPanel({
   onRenameSession,
   onDeleteSession,
 }) {
-  const iconBtn = "flex h-9 w-9 items-center justify-center rounded-lg text-steel transition hover:bg-white/10 hover:text-white";
+  const iconBtn = "flex h-9 w-9 items-center justify-center rounded-lg text-steel transition hover:bg-frost/10 hover:text-frost";
   return (
     <aside
       aria-label="History"
@@ -38,7 +38,7 @@ export default function HistoryPanel({
             onClick={onToggle}
             title="History (H)"
             aria-label="Open history"
-            className="flex w-12 flex-col items-center gap-1 rounded-xl py-2 text-frost/90 transition hover:bg-white/10 hover:text-white"
+            className="flex w-12 flex-col items-center gap-1 rounded-xl py-2 text-frost/90 transition hover:bg-frost/10 hover:text-frost"
           >
             <HistoryIcon size={22} />
             <span className="text-[10px] font-medium text-steel">History</span>
@@ -51,8 +51,8 @@ export default function HistoryPanel({
       ) : (
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center gap-2 text-white">
-              <HistoryIcon size={19} className="text-violet-soft" />
+            <div className="flex items-center gap-2 text-frost">
+              <HistoryIcon size={19} className="text-accent-soft" />
               <h2 className="text-[14px] font-semibold">History</h2>
               <span className="text-[11px] text-steel">(H)</span>
             </div>
@@ -63,7 +63,7 @@ export default function HistoryPanel({
 
           <div className="flex items-center justify-between px-4 pb-1.5">
             <span className="label">Projects</span>
-            <button type="button" onClick={onNewProject} title="New project" aria-label="New project" className="text-violet-soft hover:text-white">
+            <button type="button" onClick={onNewProject} title="New project" aria-label="New project" className="text-accent-soft hover:text-frost">
               <PlusIcon size={17} />
             </button>
           </div>
@@ -85,7 +85,7 @@ export default function HistoryPanel({
             <>
               <div className="mt-3 flex items-center justify-between border-t border-line px-4 pb-1.5 pt-3">
                 <span className="label">Sessions</span>
-                <button type="button" onClick={onNewSession} title="New session" aria-label="New session" className="text-violet-soft hover:text-white">
+                <button type="button" onClick={onNewSession} title="New session" aria-label="New session" className="text-accent-soft hover:text-frost">
                   <PlusIcon size={17} />
                 </button>
               </div>
@@ -115,7 +115,7 @@ function Row({ active, label, small, onPick, onRename, onDelete }) {
   return (
     <div
       className={
-        "group flex items-center rounded-lg transition " + (active ? "bg-violet/18 ring-1 ring-violet/30" : "hover:bg-white/5")
+        "group flex items-center rounded-lg transition " + (active ? "bg-accent/18 ring-1 ring-accent/30" : "hover:bg-frost/5")
       }
     >
       <button
@@ -124,13 +124,13 @@ function Row({ active, label, small, onPick, onRename, onDelete }) {
         className={
           "min-w-0 flex-1 truncate px-3 py-2 text-left " +
           (small ? "text-[12px] " : "text-[13px] ") +
-          (active ? "text-white" : "text-steel group-hover:text-frost")
+          (active ? "text-frost" : "text-steel group-hover:text-frost")
         }
       >
         {label}
       </button>
       <div className="hidden gap-1 pr-2 group-focus-within:flex group-hover:flex">
-        <button type="button" onClick={onRename} title="Rename" aria-label="Rename" className="text-steel hover:text-violet-soft">
+        <button type="button" onClick={onRename} title="Rename" aria-label="Rename" className="text-steel hover:text-accent-soft">
           <EditIcon size={14} />
         </button>
         <button type="button" onClick={onDelete} title="Delete" aria-label="Delete" className="text-steel hover:text-crimson">

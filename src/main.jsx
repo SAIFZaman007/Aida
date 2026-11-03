@@ -17,7 +17,7 @@ const Screen = showApp ? lazy(() => import("./AppScreen.jsx")) : lazy(() => impo
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <Suspense fallback={<div style={{ height: "100vh", width: "100vw", background: showApp ? "#060818" : "#05060E" }} />}>
+    <Suspense fallback={<div style={{ height: "100vh", width: "100vw" }} />}>
       <Screen />
     </Suspense>
   </React.StrictMode>,

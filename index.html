@@ -5,8 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>A.I.D.A — Artificial Intelligence Desktop Assistant</title>
     <meta name="description" content="A.I.D.A — a voice-first AI assistant with a talking avatar. Speaks and understands Bengali and English." />
-    <meta name="theme-color" content="#060818" />
+    <meta name="theme-color" content="#0b0907" />
     <meta name="color-scheme" content="dark" />
+    <!-- Theme: applied before the first paint (no flash). Dark is the default; the choice is kept in localStorage. -->
+    <script>
+      (function () {
+        var t = "dark";
+        try { if (localStorage.getItem("aida-theme") === "light") t = "light"; } catch (e) {}
+        var d = document.documentElement;
+        d.setAttribute("data-theme", t);
+        var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute("content", t === "light" ? "#f7f1e9" : "#0b0907");
+        var c = document.querySelector('meta[name="color-scheme"]'); if (c) c.setAttribute("content", t);
+      })();
+    </script>
+    <style>
+      html { background: #0b0907; }
+      html[data-theme="light"] { background: #f7f1e9; }
+    </style>
 
     <!-- Brand: favicon set, home-screen icons, install manifest -->
     <link rel="icon" href="/favicon.ico" sizes="any" />

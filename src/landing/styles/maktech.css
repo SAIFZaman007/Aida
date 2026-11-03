@@ -6,8 +6,8 @@
 .mak-row.s3{animation-duration:28s}
 .mak-rows:hover .mak-row{animation-play-state:paused}
 .mak-row span{transition:transform .3s,box-shadow .3s,color .3s}
-.mak-row span:hover{transform:translateY(-3px);color:#fff;box-shadow:0 0 0 1px rgba(139,124,255,.6) inset,0 10px 24px -10px rgba(139,124,255,.8)}
+.mak-row span:hover{transform:translateY(-3px);color:rgb(var(--fg-rgb));box-shadow:0 0 0 1px rgb(255 127 36 / .6) inset,0 10px 24px -10px rgb(255 127 36 / .8)}
 .mak-row span i{animation:makDot 2.4s ease-in-out infinite}
 @keyframes makMq{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-@keyframes makDot{0%,100%{opacity:.5;box-shadow:none}50%{opacity:1;box-shadow:0 0 8px var(--violet)}}
+@keyframes makDot{0%,100%{opacity:.5;box-shadow:none}50%{opacity:1;box-shadow:0 0 8px var(--accent)}}
 @media (prefers-reduced-motion:reduce){.mak-row{animation:none}}
