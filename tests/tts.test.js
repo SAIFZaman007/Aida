@@ -3,9 +3,13 @@ import assert from "node:assert/strict";
 
 import { TTS, speechBus, pickVoice, _resetVoiceCache } from "../src/lib/ttsEngine.js";
 import { CircuitBreaker, Limiter } from "../src/lib/resilience.js";
+import { avatarSync } from "../src/lib/avatarSync.js";
 
 // ---------------------------------------------------------------- fake browser
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Test audio carries the sentence number as its LEVEL (n × TAG_LEVEL): loud enough to be heard
+// (the player skips a silent lead-in), and still readable back from the played buffer.
+const TAG_LEVEL = 1000;
 let log = []; // what actually came out of the "speakers", in order (a fresh array per test: late timers of an earlier test must not leak in)
 
 class FakeUtterance {
@@ -53,7 +57,7 @@ function installBrowser({ voices = [], utteranceMs = 5, neverStart = false } = {
       return {
         connect() {}, buffer: null,
         start(at) {
-          const tag = Math.round(this.buffer.data[0] * 32768);
+          const tag = Math.round((this.buffer.data[0] * 32768) / TAG_LEVEL);
           const wait = Math.max(0, (at - ctx.currentTime) * 1000);
           this._t0 = setTimeout(() => log.push({ kind: "cloud", tag }), wait);
           this._t = setTimeout(() => this.onended?.(), wait + this.buffer.duration * 1000);
@@ -76,7 +80,7 @@ const voices = [
 
 /** PCM of `samples` 16-bit samples whose value is the sentence number (so playback order is observable). */
 const pcm = (n, samples = 4800) => {
-  const a = new Int16Array(samples).fill(n);
+  const a = new Int16Array(samples).fill(n * TAG_LEVEL);
   return new Uint8Array(a.buffer);
 };
 const codedError = (code) => Object.assign(new Error(code), { code });
@@ -567,4 +571,153 @@ test("pickVoice: pinned voice wins within its language; Bengali prefers bn-BD", 
   assert.equal(pickVoice(voices, { voiceURI: "tanishaa" }, avatar, "bn").name, "Tanishaa");
   assert.equal(pickVoice(voices, {}, avatar, "en").name, "Zira"); // hint match
   assert.equal(pickVoice(voices.slice(0, 2), {}, avatar, "bn"), null);
+});
+
+// ------------------------------------------------------------------------ avatar starts WITH the voice (v3.7)
+/** Times (ms since `t0`) at which the avatar was told to talk and at which the first sound was played. */
+function watch(tts) {
+  const t0 = performance.now();
+  const at = { talk: null, sound: null, talkEnd: null };
+  tts.onSpeakingChange = (v) => { if (v && at.talk == null) at.talk = performance.now() - t0; if (!v) at.talkEnd = performance.now() - t0; };
+  const poll = setInterval(() => { if (at.sound == null && log.some((l) => l.kind === "cloud")) at.sound = performance.now() - t0; }, 1);
+  return { at, stop: () => clearInterval(poll) };
+}
+
+test("the avatar does NOT move while the voice is still being fetched", async () => {
+  avatarSync.attach(false);
+  const tts = await build({ api: fakeApi({ delays: { 1: 180 } }) });
+  const w = watch(tts);
+  say(tts, 0, "One 1.");
+  await sleep(100);
+  assert.equal(tts.busy, true);
+  assert.equal(speechBus.speaking, false, "no sound yet, so the avatar is not talking");
+  assert.equal(w.at.talk, null);
+  await idle(tts);
+  w.stop();
+  assert.ok(w.at.talk >= 170, `the avatar started at ${w.at.talk | 0} ms, with the audio (fetched at ~180 ms)`);
+  assert.ok(w.at.sound >= w.at.talk, "and never after the sound it belongs to");
+});
+
+test("picture and voice begin together: the first sound waits for the video's first frame", async () => {
+  const tts = await build({ api: fakeApi({ delays: { 1: 20 } }), timeouts: { avatarStart: 400 } });
+  avatarSync.attach(true);
+  const w = watch(tts);
+  let movingAt = null;
+  const prev = tts.onSpeakingChange;
+  tts.onSpeakingChange = (v) => { prev(v); if (v) setTimeout(() => { movingAt = performance.now(); avatarSync.videoMoving(); }, 90); };
+  const t0 = performance.now();
+  say(tts, 0, "One 1.");
+  await idle(tts);
+  w.stop();
+  avatarSync.attach(false);
+  const soundAt = t0 + w.at.sound;
+  assert.ok(movingAt != null, "the video reported its first frame");
+  assert.ok(soundAt >= movingAt - 2, `the sound (${(soundAt - t0) | 0} ms) is not earlier than the picture (${(movingAt - t0) | 0} ms)`);
+  assert.ok(soundAt - movingAt < 80, "and follows it at once");
+});
+
+test("a video that never answers delays the voice by the cap, no more", async () => {
+  const tts = await build({ api: fakeApi({ delays: { 1: 20 } }), timeouts: { avatarStart: 90 } });
+  avatarSync.attach(true);
+  const w = watch(tts);
+  say(tts, 0, "One 1.");
+  await idle(tts);
+  w.stop();
+  avatarSync.attach(false);
+  assert.ok(w.at.sound != null, "the voice is never silenced by a stalled video");
+  const wait = w.at.sound - w.at.talk;
+  assert.ok(wait >= 80 && wait < 220, `sound began ${wait | 0} ms after the avatar was told (cap 90 ms + scheduling lead)`);
+});
+
+test("no talk video on screen (a still portrait): the voice does not wait at all", async () => {
+  const tts = await build({ api: fakeApi({ delays: { 1: 20 } }), timeouts: { avatarStart: 400 } });
+  avatarSync.attach(false);
+  const w = watch(tts);
+  say(tts, 0, "One 1.");
+  await idle(tts);
+  w.stop();
+  assert.ok(w.at.sound - w.at.talk < 120, `sound began ${(w.at.sound - w.at.talk) | 0} ms after the avatar was told`);
+});
+
+test("only the START of a reply waits for the video: the next sentences flow on", async () => {
+  const tts = await build({ api: fakeApi({ delays: { 1: 10, 2: 10, 3: 10 } }), timeouts: { avatarStart: 300 } });
+  avatarSync.attach(true);
+  let waits = 0;
+  const orig = avatarSync.whenMoving;
+  avatarSync.whenMoving = (ms) => { waits++; return orig.call(avatarSync, ms); };
+  const prev = tts.onSpeakingChange;
+  tts.onSpeakingChange = (v) => { prev?.(v); if (v) setTimeout(() => avatarSync.videoMoving(), 20); };
+  say(tts, 0, "One 1."); say(tts, 1, "Two 2."); say(tts, 2, "Three 3.");
+  await idle(tts);
+  avatarSync.whenMoving = orig;
+  avatarSync.attach(false);
+  assert.equal(waits, 1);
+  assert.deepEqual(seq().filter((x) => x.startsWith("c")), ["c1", "c2", "c3"]);
+});
+
+test("the avatar stops talking when the reply ends, and a new reply waits for its own sound again", async () => {
+  avatarSync.attach(false);
+  const tts = await build({ api: fakeApi({ delays: { 1: 10, 2: 120 } }) });
+  const states = [];
+  tts.onSpeakingChange = (v) => states.push(v);
+  say(tts, 0, "One 1.");
+  await idle(tts);
+  assert.deepEqual(states, [true, false]);
+  say(tts, 1, "Two 2.");
+  await sleep(60);
+  assert.equal(speechBus.speaking, false, "second reply: still fetching, avatar quiet");
+  await idle(tts);
+  assert.deepEqual(states, [true, false, true, false]);
+});
+
+test("device voice: the avatar starts when the voice does (onstart), never before", async () => {
+  avatarSync.attach(false);
+  const tts = await build({ cfg: settings({ ttsProvider: "webspeech" }), neverStart: true, timeouts: { browserStart: 60 } });
+  const states = [];
+  tts.onSpeakingChange = (v) => states.push(v);
+  say(tts, 0, "One 1.");
+  await idle(tts);
+  assert.ok(!states.includes(true), "a device voice that never started never moved the avatar");
+  const ok = await build({ cfg: settings({ ttsProvider: "webspeech" }) });
+  const seen = [];
+  ok.onSpeakingChange = (v) => seen.push(v);
+  say(ok, 0, "Hello.");
+  await idle(ok);
+  assert.deepEqual(seen, [true, false]);
+});
+
+test("cancel() while the sound is held for the video: nothing plays and the avatar stays still", async () => {
+  const tts = await build({ api: fakeApi({ delays: { 1: 10 } }), timeouts: { avatarStart: 300 } });
+  avatarSync.attach(true);
+  say(tts, 0, "One 1.");
+  await sleep(60);                                  // audio fetched, avatar told, video has not answered yet
+  tts.cancel();
+  await sleep(350);
+  avatarSync.attach(false);
+  assert.ok(!log.some((l) => l.kind === "cloud"), "no sound after cancel");
+  assert.equal(speechBus.speaking, false);
+});
+
+test("avatarSync: immediate with no video or a hidden tab; released by the video; capped otherwise", async () => {
+  avatarSync.attach(false);
+  const t0 = performance.now();
+  await avatarSync.whenMoving(500);
+  assert.ok(performance.now() - t0 < 30, "nothing to wait for");
+  avatarSync.attach(true);
+  const t1 = performance.now();
+  const p = avatarSync.whenMoving(500);
+  setTimeout(() => avatarSync.videoMoving(), 25);
+  await p;
+  const dt = performance.now() - t1;
+  assert.ok(dt >= 20 && dt < 100, `released by the video after ${dt | 0} ms`);
+  const t2 = performance.now();
+  await avatarSync.whenMoving(60);
+  assert.ok(performance.now() - t2 >= 55 && performance.now() - t2 < 150, "capped");
+  globalThis.document = { hidden: true };
+  const t3 = performance.now();
+  await avatarSync.whenMoving(500);
+  assert.ok(performance.now() - t3 < 30, "hidden tab: the video is paused, never wait for it");
+  delete globalThis.document;
+  avatarSync.videoMoving(); // nobody waiting: harmless
+  avatarSync.attach(false);
 });

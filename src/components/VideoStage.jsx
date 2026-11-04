@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { figureX } from "../lib/avatars.js";
+import { avatarSync } from "../lib/avatarSync.js";
 
 /*
   VideoStage — the avatar, as full-screen video behind the whole interface.
@@ -19,6 +20,10 @@ import { figureX } from "../lib/avatars.js";
 
   A mode whose clips have not been added yet (avatar.video === null) shows its still
   portrait in the same place, so every mode always has a face.
+
+  VOICE AND PICTURE START TOGETHER: the TALK clip is started when the first sound of a reply is
+  ready (not before: see ttsEngine.js), and reports through avatarSync once its first frame is on
+  screen; the engine releases the sound at that moment.
 
   PERFORMANCE: the TALK clip only plays while someone is speaking (it is paused and rewound
   afterwards), and both clips pause when the tab or window is hidden.
@@ -60,8 +65,20 @@ function Layer({ avatar, speaking, fading }) {
     if (speaking && !fading) {
       let cancelled = false;
       el.currentTime = 0;
-      const show = () => !cancelled && setTalkShown(true);
-      el.play().then(show, show); // show it even if play() is refused: its first frame is the same pose
+      const show = () => {
+        if (cancelled) return;
+        setTalkShown(true);
+        // Tell the voice engine the picture is moving (it holds the first sound for this, briefly).
+        // No frame callback on this browser: playing is the best signal there is.
+        if (el.requestVideoFrameCallback) el.requestVideoFrameCallback(() => !cancelled && avatarSync.videoMoving());
+        else avatarSync.videoMoving();
+      };
+      const refused = () => {
+        if (cancelled) return;
+        setTalkShown(true); // its first frame is the same pose as the idle clip
+        avatarSync.videoMoving(); // never make the voice wait for a video that will not play
+      };
+      el.play().then(show, refused);
       return () => {
         cancelled = true;
       };
@@ -176,6 +193,13 @@ export default function VideoStage({ avatar, activity }) {
     const t = setTimeout(() => setPrev(null), FADE_MS + 200);
     return () => clearTimeout(t);
   }, [avatar]);
+
+  // The voice engine only waits for a talk video that exists.
+  const hasVideo = !!avatar.video;
+  useEffect(() => {
+    avatarSync.attach(hasVideo);
+    return () => avatarSync.attach(false);
+  }, [hasVideo]);
 
   return (
     <div className="pointer-events-none absolute inset-0 -z-0 bg-void-900" aria-hidden="true">

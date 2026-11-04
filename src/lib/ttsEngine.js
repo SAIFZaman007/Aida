@@ -38,6 +38,9 @@
      browser fallback — uses them, so the voice cannot change halfway (a mode switch
      cancels the reply instead). On a browser voice whose gender is unknown the pitch
      is nudged the right way, so a fallback is never a clearly opposite-sex voice.
+   - THE AVATAR MOVES WITH THE SOUND: the talk video starts at the moment the first sound of a
+     reply is heard — not while its audio is still being fetched. The sound waits for the video's
+     first frame (avatarSync, at most AVATAR_START_MS), so picture and voice begin together.
    - STOPPABLE: cancel() silences playback, aborts in-flight requests and discards
      late results (epoch guard).
    - READING HIGHLIGHTER: word-by-word karaoke inside the sentence being read, timed
@@ -51,6 +54,7 @@
 import { ReadingHighlighter } from "./highlighter.js";
 import { PcmClip, PcmPlayer } from "./pcmPlayer.js";
 import { CircuitBreaker, Limiter } from "./resilience.js";
+import { avatarSync } from "./avatarSync.js";
 import {
   dominantLanguage,
   estimateWordMarks,
@@ -71,6 +75,7 @@ const SLOW_NOTICE_MS = 4_500; // no first audio yet: tell the person the voice i
 const REVEAL_GRACE_MS = 1_200; // a sentence is shown this long after its turn even if its audio is late
 const FIRST_REVEAL_HOLD_MS = 3_500; // …for the sentence that starts a reply (nothing is being read yet)
 const BROWSER_START_MS = 2_500; // the browser voice must START speaking within this
+const AVATAR_START_MS = 250; // the first sound waits at most this long for the talk video's first frame
 const LOOKAHEAD = 3; // sentences fetched ahead of the one being read
 const SEC_PER_CHAR = { en: 0.062, bn: 0.075 }; // starting estimate; learned from real clips
 
@@ -187,6 +192,7 @@ export class TTS {
       grace: REVEAL_GRACE_MS,
       firstHold: FIRST_REVEAL_HOLD_MS,
       browserStart: BROWSER_START_MS,
+      avatarStart: AVATAR_START_MS,
       ...(timeouts || {}),
     };
     this._breaker = breaker; // cloud-voice health
@@ -208,7 +214,7 @@ export class TTS {
     this._secPerChar = { ...SEC_PER_CHAR };
     this._current = null;
     this.diagnostics = []; // the last sentences' timings, newest last (see _record)
-    this.onSpeakingChange = null; // avatar mouth: true while sound is playing
+    this.onSpeakingChange = null; // avatar mouth: true from the first sound of a reply until it ends
     this.onBusyChange = null; // true from the first queued sentence until all are read
     this.onSentenceStart = null; // (index) a sentence begins to be read → reveal its text
     this.onNotice = null; // ({ kind, lang, code, text }) something the person should know
@@ -330,6 +336,15 @@ export class TTS {
     this.onSpeakingChange?.(v);
   }
 
+  /** The first sound of a reply is ready: start the avatar's talk video and hold the sound for the
+   *  video's first frame (bounded), so mouth and voice begin together. Later sentences of the same
+   *  reply find the avatar already talking and do not wait. */
+  async _startAvatar() {
+    if (this._speaking) return;
+    this._setSpeaking(true);
+    await avatarSync.whenMoving(this._timeouts.avatarStart);
+  }
+
   /** Tell the person something, once per kind per reply. */
   _notice(kind, item, code) {
     const reply = this._reply;
@@ -391,7 +406,6 @@ export class TTS {
       this._reveal(item.index);
       return;
     }
-    this._setSpeaking(true);
     const turnAt = nowMs();
     if (item.clip) {
       // The text appears when the sound starts — or after a grace period when the voice
@@ -499,8 +513,10 @@ export class TTS {
     const clip = item.clip;
     this._startMeter();
     await this._player.play(clip, {
+      beforeStart: () => this._startAvatar(),
       onStart: ({ known }) => {
         if (epoch !== this._epoch) return;
+        this._setSpeaking(true); // a player without beforeStart: the avatar starts with the sound
         onSound?.();
         this._driveHighlight(item, clip, known, epoch);
       },
@@ -597,6 +613,7 @@ export class TTS {
       };
       u.onstart = () => {
         started = true;
+        if (epoch === this._epoch) this._setSpeaking(true); // the device voice is audible now: the avatar starts with it
         speechBus.synthetic = true;
         clearTimeout(startGuard);
         this.highlighter.driveWholeSentence(item.index);

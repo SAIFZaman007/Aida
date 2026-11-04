@@ -35,6 +35,7 @@ export default function ChatPanel({ conversation, avatar, onActivity, onNotice, 
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false); // a request is in flight
   const [speaking, setSpeaking] = useState(false);
+  const [voiceQueued, setVoiceQueued] = useState(false); // sentences are waiting for their voice (not heard yet)
   const [voiceState, setVoiceState] = useState("idle");
   const [transcribing, setTranscribing] = useState(false);
   const [caption, setCaption] = useState(""); // live words of what the person is saying
@@ -74,6 +75,7 @@ export default function ChatPanel({ conversation, avatar, onActivity, onNotice, 
       }
     };
     tts.onBusyChange = (isBusy) => {
+      setVoiceQueued(isBusy);
       if (!isBusy) maybeFinish();
     };
     // Why a sentence is silent or slow (voice quota, no Bengali voice on this device…):
@@ -107,12 +109,13 @@ export default function ChatPanel({ conversation, avatar, onActivity, onNotice, 
 
   // What the avatar should be doing right now.
   const capturing = voiceState === "capturing";
-  const thinkingNow = (busy && !speaking) || transcribing;
+  // Until the first sound is heard the avatar is still "thinking": its talk video starts WITH the voice.
+  const thinkingNow = ((busy || voiceQueued) && !speaking) || transcribing;
   useEffect(() => {
     onActivity?.({ speaking, listening: capturing, thinking: thinkingNow });
   }, [speaking, capturing, thinkingNow, onActivity]);
 
-  // A Aida session means "keep listening": switch hands-free voice on.
+  // An Aida session means "keep listening": switch hands-free voice on.
   // (Not when the session was opened only to type into: autoVoice is false then.)
   useEffect(() => {
     if (autoVoice && conversation?.persona === "nonstop") updateSettings({ voiceMode: true });

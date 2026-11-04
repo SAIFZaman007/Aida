@@ -19,6 +19,11 @@ const START_LEAD_SECONDS = 0.04; // scheduling margin for the very first chunk
 // whatever the timers do.
 const LEAD_OUT_SECONDS = 0.06;
 const OUTPUT_DELAY_SECONDS = 0.06; // the mouth LEADS the sound by this much (see _ctx)
+// Speech synthesis often opens with a short stretch of digital silence. When a reply starts from
+// silence, that stretch is skipped, so the first thing heard is the first word, at the moment the
+// avatar starts to move (the pre-roll keeps the attack of a soft consonant).
+const SILENCE_LEVEL = 0.001; // |sample| below this (about -60 dBFS: inaudible) counts as "nothing yet"
+const ONSET_PREROLL_SECONDS = 0.015;
 
 /** One sentence's audio, filled by the network while the player drains it. */
 export class PcmClip {
@@ -90,6 +95,13 @@ export class PcmClip {
     this._waiters = [];
     for (const r of w) r();
   }
+}
+
+/** Index of the first audible sample (less the pre-roll); `samples.length` when all of it is silent. */
+function audibleFrom(samples, rate) {
+  let i = 0;
+  while (i < samples.length && Math.abs(samples[i]) < SILENCE_LEVEL) i++;
+  return i >= samples.length ? samples.length : Math.max(0, i - Math.round(rate * ONSET_PREROLL_SECONDS));
 }
 
 function int16ToFloat32(u8, carryByte) {
@@ -176,9 +188,12 @@ export class PcmPlayer {
    * played (or `stop()` was called). Rejects only if nothing could be played at
    * all (the engine then falls back to the browser voice).
    *
+   *   beforeStart()       awaited once, right before the sound would begin from silence (not
+   *                       when this clip chains onto the previous one): the caller gets ready —
+   *                       the engine starts the avatar's video there — and the sound follows
    *   onStart({ known })  fired when sound begins; `known` = clip already complete
    */
-  async play(clip, { onStart } = {}) {
+  async play(clip, { onStart, beforeStart } = {}) {
     const token = ++this._token;
     const alive = () => token === this._token;
 
@@ -188,6 +203,15 @@ export class PcmPlayer {
     if (!alive()) return;
 
     const ctx = this._ctx();
+    const fromSilence = this.playhead <= ctx.currentTime; // nothing of the previous sentence is still playing
+    if (fromSilence && beforeStart) {
+      try {
+        await beforeStart();
+      } catch {
+        /* the sound never depends on the picture */
+      }
+      if (!alive()) return;
+    }
     let carry = null;
     let index = 0;
     let started = false;
@@ -206,8 +230,10 @@ export class PcmPlayer {
           merged.set(p, o);
           o += p.length;
         }
-        const { samples, carry: next } = int16ToFloat32(merged, carry);
+        const { samples: all, carry: next } = int16ToFloat32(merged, carry);
         carry = next;
+        // Starting from silence: drop the silent lead-in (a chunk that is all silence is skipped).
+        const samples = !started && fromSilence ? all.subarray(audibleFrom(all, clip.sampleRate)) : all;
         if (samples.length) {
           const buffer = ctx.createBuffer(1, samples.length, clip.sampleRate);
           if (buffer.copyToChannel) buffer.copyToChannel(samples, 0);
